@@ -1,0 +1,2293 @@
+<html lang="zh-CN" data-theme="light" data-trae-theme="light"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="纯前端文章评分工具：从今日头条与微信公众号视角评估准确性、原创度与 AI 重合度。">
+<title>文章双平台评分器 · 今日头条 / 微信公众号</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#f4f5f7;--card:#ffffff;--text:#171a1f;--muted:#697180;--line:#e3e6ea;--field:#fbfbfc;
+  --accent:#2563eb;--accent-weak:#eaf1fe;--good:#12944a;--mid:#c2760a;--bad:#d92d20;
+  --toutiao:#e23a35;--wechat:#0a9a4c;
+  --notice-bg:#fdf6e3;--notice-line:#efe0b6;--notice-text:#7a5a12;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -16px rgba(16,24,40,.18);
+  --radius:14px;
+}
+html[data-theme="dark"]{
+  --bg:#0f1215;--card:#171b1f;--text:#e7eaee;--muted:#98a1ac;--line:#282e35;--field:#1c2127;
+  --accent:#5b93f7;--accent-weak:#1a2637;--good:#35c07a;--mid:#e0a13a;--bad:#f2705f;
+  --toutiao:#f2605b;--wechat:#2fbf74;
+  --notice-bg:#251f12;--notice-line:#3b3218;--notice-text:#e3c283;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -18px rgba(0,0,0,.7);
+}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 72px}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex:0 0 auto}
+h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+.sub{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+
+.disclaimer{
+  border:1px solid var(--notice-line);background:var(--notice-bg);color:var(--notice-text);
+  border-radius:12px;padding:10px 13px;font-size:12.5px;line-height:1.6;margin:0 0 14px;
+}
+.disclaimer b{font-weight:650}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px}
+.card-head h2{font-size:14.5px;margin:0;font-weight:650;display:flex;align-items:center;gap:8px}
+.step{width:20px;height:20px;border-radius:6px;background:var(--accent-weak);color:var(--accent);font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
+.counter{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.counter.over{color:var(--bad);font-weight:600}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 5px;font-weight:500}
+input[type=text],input[type=password],select,textarea{
+  width:100%;background:var(--field);color:var(--text);border:1px solid var(--line);
+  border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+textarea{min-height:280px;resize:vertical;line-height:1.75;font-size:14.5px;padding:12px 13px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+.hint{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+
+.btn{
+  appearance:none;border:1px solid var(--line);background:var(--card);color:var(--text);
+  padding:8px 14px;border-radius:10px;font-size:13.5px;font-family:inherit;font-weight:500;
+  cursor:pointer;transition:background .15s,border-color .15s,opacity .15s,transform .05s;white-space:nowrap;
+}
+.btn:hover{border-color:#c9ced6}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:9px 20px}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.spacer{flex:1}
+
+.seg{display:inline-flex;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{
+  appearance:none;border:0;background:transparent;color:var(--muted);font-family:inherit;
+  font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:500;
+}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:0 1px 2px rgba(16,24,40,.08);font-weight:600}
+.check{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.check input{accent-color:var(--accent);width:15px;height:15px}
+
+.status{border-radius:12px;padding:12px 14px;font-size:13.5px;margin-bottom:16px;border:1px solid var(--line);background:var(--card);display:flex;gap:10px;align-items:flex-start}
+.status[hidden]{display:none}
+.status.error{border-color:rgba(217,45,32,.35);background:rgba(217,45,32,.07);color:var(--bad)}
+.status.warn{border-color:rgba(194,118,10,.35);background:rgba(194,118,10,.08);color:var(--mid)}
+.status.info{color:var(--muted)}
+.status .msg{flex:1;min-width:0;word-break:break-word}
+.status .msg b{font-weight:650}
+.spinner{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex:0 0 auto;margin-top:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+pre.stream{margin:10px 0 0;max-height:180px;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+#results[hidden]{display:none}
+.group{margin-bottom:14px}
+.group-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;margin:0 0 10px}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.score-card{border:1px solid var(--line);background:var(--field);border-radius:12px;padding:14px}
+.score-top{display:flex;gap:13px;align-items:flex-start}
+.ring{position:relative;width:62px;height:62px;flex:0 0 auto}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
+.ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--c);stroke-dasharray:169.65;stroke-dashoffset:calc(169.65 - 169.65 * var(--p) / 100);transition:stroke-dashoffset .9s cubic-bezier(.22,.61,.36,1)}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-size:17px;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.score-meta{min-width:0;flex:1}
+.score-name{font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted);border:1px solid var(--line);background:var(--card);padding:1px 6px;border-radius:999px;letter-spacing:.2px}
+.score-comment{margin:4px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55}
+.points{margin:11px 0 0;padding-left:17px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.points li{margin:3px 0}
+.points li::marker{color:var(--line)}
+.ai-inner .score-name{font-size:14px}
+
+.sec-title{font-size:13.5px;font-weight:650;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+ol.sugg{margin:0;padding-left:20px;font-size:13.5px}
+ol.sugg li{margin:6px 0}
+.note{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note>div{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--field);font-size:12.5px;color:var(--muted);line-height:1.65}
+.note b{display:flex;align-items:center;gap:7px;color:var(--text);font-size:12.5px;margin-bottom:4px;font-weight:650}
+
+.meta{font-size:11.5px;color:var(--muted);margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 14px;font-variant-numeric:tabular-nums;border-top:1px dashed var(--line);padding-top:10px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+
+details.card{padding:0;overflow:hidden}
+details.card>summary{cursor:pointer;padding:15px 16px;font-size:14px;font-weight:650;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"展开";font-size:12px;font-weight:500;color:var(--accent)}
+details.card[open]>summary::after{content:"收起"}
+details.card>summary:hover{background:var(--field)}
+.doc{padding:0 16px 18px;font-size:13px;color:var(--muted);line-height:1.8}
+.doc h3{font-size:12.5px;color:var(--text);margin:14px 0 4px;font-weight:650}
+.doc h3:first-child{margin-top:0}
+.doc ul,.doc ol{margin:4px 0;padding-left:20px}
+.doc li{margin:3px 0}
+.doc code{background:var(--field);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.doc b{color:var(--text);font-weight:650}
+
+footer{text-align:center;font-size:11.5px;color:var(--muted);margin-top:26px;line-height:1.8}
+
+@media (max-width:720px){
+  .wrap{padding:14px 12px 56px}
+  .grid2,.sgrid,.note{grid-template-columns:1fr}
+  h1{font-size:16.5px}
+  .sub{display:none}
+  textarea{min-height:220px}
+  .row .spacer{display:none}
+  .row .btn.primary{flex:1;order:9}
+  .card{padding:14px}
+  .score-card{padding:12px}
+}
+</style>
+<style data-trae-edit-ui="true" id="trae-previewer-tools-styles">:root {
+  --trae-layer-image-download: 89990;
+  --trae-layer-browser-inspect-overlay: 90000;
+  --trae-layer-browser-inspect-highlight: 90010;
+  --trae-layer-browser-inspect-action: 90020;
+  --trae-layer-text-selection-action: 90030;
+  --trae-layer-edit-tooltip: 100095;
+}
+:root,
+[data-trae-theme='dark'] {
+  --trae-bg-base-default: #171717;
+  --trae-bg-menu: #222427;
+  --trae-bg-overlay-l1: rgba(255, 255, 255, 0.04);
+  --trae-bg-overlay-l2: rgba(255, 255, 255, 0.08);
+  --trae-bg-overlay-l3: rgba(255, 255, 255, 0.12);
+  --trae-bg-overlay-l4: rgba(255, 255, 255, 0.16);
+  --trae-bg-invert: #f5f9fe;
+  --trae-bg-invert-hover: #e8ecf0;
+  --trae-bg-invert-active: #dce0e4;
+  --trae-bg-invert-disabled: rgba(224, 226, 242, 0.12);
+  --bg-bg-brand-disabled: rgba(75, 63, 227, 0.35);
+  --bg-bg-brand-popup: rgba(106, 111, 255, 0.15);
+  --trae-border-l1: #e0e2f217;
+  --trae-border-l2: rgba(255, 255, 255, 0.12);
+  --trae-border-l3: rgba(255, 255, 255, 0.08);
+  --trae-border-neutral-l3: rgba(229, 229, 229, 0.20);
+  --trae-border-brand: #6a6fff;
+  --trae-text-default: #f5f9fe;
+  --trae-text-default-hover: #f5f9fe;
+  --trae-text-default-active: #f5f9fe;
+  --trae-text-secondary: rgba(245, 249, 254, 0.5);
+  --trae-text-tertiary: rgba(245, 249, 254, 0.4);
+  --trae-text-disabled: #666b75;
+  --trae-text-onaccent: #222427;
+  --trae-icon-default: #f5f9fe;
+  --trae-icon-secondary: rgba(245, 249, 254, 0.5);
+  --trae-icon-brand: #6a6fff;
+  --icon-icon-brand: var(--trae-icon-brand);
+  --trae-icon-onaccent: #222427;
+  --trae-status-success: #22c55e;
+  --trae-status-primary: #3b82f6;
+  --trae-status-primary-default: #387bff;
+  --trae-status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --trae-status-success-default: #33c192;
+  --trae-status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --trae-status-error-default: #f65a5a;
+  --trae-status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --trae-annotation-marker-bg: #4b3fe3;
+  --trae-annotation-marker-text: #ffffff;
+  --trae-annotation-region-border: var(--trae-status-primary-default);
+  --trae-region-outside-mask-bg: rgba(0, 0, 0, 0.32);
+  --trae-panel-shadow: 0px 6px 24px -1px rgba(0, 0, 0, 0.16);
+  --trae-floating-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.2);
+  --trae-shadow-elevation-50: 0 1px 2px -1px rgba(0, 0, 0, 0.45);
+  --text-text-default: var(--trae-text-default);
+  --text-text-onaccent: var(--trae-text-onaccent);
+  --bg-bg-menu: var(--trae-bg-menu);
+  --bg-bg-white: var(--trae-bg-menu);
+  --bg-bg-invert: var(--trae-bg-invert);
+  --bg-bg-invert-disabled: var(--trae-bg-invert-disabled);
+  --bg-bg-overlay-l1: var(--trae-bg-overlay-l1);
+  --bg-bg-overlay-l2: var(--trae-bg-overlay-l2);
+  --bg-bg-overlay-l3: var(--trae-bg-overlay-l3);
+  --border-border-neutral-l1: var(--trae-border-l1);
+  --border-border-brand: var(--trae-border-brand);
+  --border-border-brand-half: rgba(106, 111, 255, 0.4);
+  --status-error-default: var(--trae-status-error-default);
+  --status-error-surface-l1: var(--trae-status-error-surface-l1);
+  --radius-radius-md-12: 12px;
+  --spacers-spacer-0: 0;
+  --spacers-spacer-6: 6px;
+}
+
+[data-trae-theme='light'] {
+  --trae-bg-base-default: #fafafa;
+  --trae-bg-menu: #ffffff;
+  --trae-bg-overlay-l1: rgba(0, 0, 0, 0.04);
+  --trae-bg-overlay-l2: rgba(0, 0, 0, 0.06);
+  --trae-bg-overlay-l3: rgba(0, 0, 0, 0.08);
+  --trae-bg-overlay-l4: rgba(0, 0, 0, 0.12);
+  --trae-bg-invert: #1f2328;
+  --trae-bg-invert-hover: #32383f;
+  --trae-bg-invert-active: #444d56;
+  --trae-bg-invert-disabled: rgba(115, 115, 115, 0.20);
+  --bg-bg-brand-disabled: rgba(75, 63, 227, 0.22);
+  --bg-bg-brand-popup: rgba(170, 183, 255, 0.36);
+  --trae-border-l1: rgba(0, 0, 0, 0.1);
+  --trae-border-l2: rgba(0, 0, 0, 0.12);
+  --trae-border-l3: rgba(0, 0, 0, 0.08);
+  --trae-border-neutral-l3: rgba(115, 115, 115, 0.36);
+  --trae-border-brand: #4b3fe3;
+  --trae-text-default: #1f2328;
+  --trae-text-default-hover: #111214;
+  --trae-text-default-active: #111214;
+  --trae-text-secondary: rgba(31, 35, 40, 0.5);
+  --trae-text-tertiary: rgba(31, 35, 40, 0.4);
+  --trae-text-disabled: #a1a1a1;
+  --trae-text-onaccent: #ffffff;
+  --trae-icon-default: #1f2328;
+  --trae-icon-secondary: rgba(31, 35, 40, 0.5);
+  --trae-icon-brand: #4b3fe3;
+  --icon-icon-brand: var(--trae-icon-brand);
+  --trae-icon-onaccent: #ffffff;
+  --trae-status-success: #22c55e;
+  --trae-status-primary: #3b82f6;
+  --trae-status-primary-default: #2f74ff;
+  --trae-status-primary-surface-l1: rgba(47, 116, 255, 0.12);
+  --trae-status-success-default: #15a877;
+  --trae-status-success-surface-l1: rgba(64, 176, 139, 0.12);
+  --trae-status-error-default: #e8463a;
+  --trae-status-error-surface-l1: rgba(232, 70, 58, 0.12);
+  --trae-annotation-marker-bg: #4b3fe3;
+  --trae-annotation-marker-text: #ffffff;
+  --trae-annotation-region-border: var(--trae-status-primary-default);
+  --trae-region-outside-mask-bg: rgba(0, 0, 0, 0.18);
+  --trae-panel-shadow: 0px 6px 24px -1px rgba(24, 24, 24, 0.06);
+  --trae-floating-shadow: 0px 2px 8px 0px rgba(24, 24, 24, 0.2);
+  --trae-shadow-elevation-50: 0 1px 2px -1px rgba(24, 24, 24, 0.08);
+  --text-text-default: var(--trae-text-default);
+  --text-text-onaccent: var(--trae-text-onaccent);
+  --bg-bg-menu: var(--trae-bg-menu);
+  --bg-bg-white: var(--trae-bg-menu);
+  --bg-bg-invert: var(--trae-bg-invert);
+  --bg-bg-invert-disabled: var(--trae-bg-invert-disabled);
+  --bg-bg-overlay-l1: var(--trae-bg-overlay-l1);
+  --bg-bg-overlay-l2: var(--trae-bg-overlay-l2);
+  --bg-bg-overlay-l3: var(--trae-bg-overlay-l3);
+  --border-border-neutral-l1: var(--trae-border-l1);
+  --border-border-brand: var(--trae-border-brand);
+  --border-border-brand-half: rgba(75, 63, 227, 0.4);
+  --status-error-default: var(--trae-status-error-default);
+  --status-error-surface-l1: var(--trae-status-error-surface-l1);
+  --radius-radius-md-12: 12px;
+  --spacers-spacer-0: 0;
+  --spacers-spacer-6: 6px;
+}
+
+@keyframes trae-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes trae-edit-bar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes trae-edit-bar-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@keyframes trae-edit-panel-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.trae-edit-mode-active:not(.trae-edit-mode-dragging) body *:not([data-trae-edit-ui]):not([data-trae-edit-ui] *) {
+  transition: none !important;
+  animation-play-state: paused !important;
+}
+
+.trae-edit-mode-reorder-hit-test [data-trae-edit-ui]:not(.trae-edit-pointer-shield):not(.trae-edit-panel),
+.trae-edit-mode-reorder-hit-test [data-trae-edit-ui]:not(.trae-edit-pointer-shield):not(.trae-edit-panel) * {
+  pointer-events: none !important;
+}
+
+.trae-browser-inspect-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--trae-layer-browser-inspect-overlay);
+  pointer-events: auto;
+  background: transparent;
+}
+
+.trae-browser-inspect-highlight-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--trae-layer-browser-inspect-highlight);
+  display: none;
+}
+
+.trae-browser-inspect-highlight-tag {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  height: 18px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  background-color: var(--trae-status-success-default);
+  color: var(--trae-text-onaccent);
+  font-size: 12px;
+  font-weight: 400;
+  display: none;
+  align-items: center;
+  z-index: var(--trae-layer-browser-inspect-action);
+}
+
+.trae-browser-inspect-highlight-box-show {
+  display: flex;
+}
+
+.trae-browser-inspect-highlight-tag.trae-browser-inspect-highlight-box-show {
+  display: none;
+}
+
+.trae-browser-inspect-select-button.trae-browser-inspect-highlight-box-show {
+  display: block !important;
+}
+
+.trae-browser-inspect-select-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  z-index: var(--trae-layer-browser-inspect-action);
+}
+
+.trae-browser-inspect-select-highlight-box {
+  background: transparent !important;
+}
+
+.trae-browser-inspect-select-highlight-box .trae-browser-inspect-highlight-tag {
+  background-color: var(--trae-status-success-default);
+}
+
+.trae-add-to-chat-card {
+  display: block;
+  overflow: hidden;
+  background: var(--trae-bg-menu);
+  border: 1px solid var(--trae-border-l1);
+  border-radius: 8px;
+  box-shadow: var(--trae-floating-shadow);
+  transition:
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trae-add-to-chat-content {
+  position: relative;
+  width: max-content;
+}
+
+.trae-fade-exit {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.trae-fade-enter {
+  opacity: 1;
+  transition: opacity 0.2s ease-in;
+}
+
+.trae-buttons-view {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: transparent;
+}
+
+.trae-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.trae-action-button:hover {
+  background: var(--trae-bg-overlay-l2);
+}
+
+.trae-action-button:active {
+  background: var(--trae-bg-overlay-l3);
+}
+
+.trae-action-button:focus-visible {
+  outline: 2px solid var(--trae-status-primary);
+  outline-offset: 1px;
+}
+
+.trae-action-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--trae-icon-default);
+  flex-shrink: 0;
+}
+
+.trae-action-button-title {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--trae-text-default);
+  white-space: nowrap;
+}
+
+.trae-edit-toolbar-button-active {
+  background: var(--bg-bg-brand-disabled, rgba(75, 63, 227, 0.22)) !important;
+  color: var(--icon-icon-brand, #4b3fe3) !important;
+  font-weight: bold !important;
+}
+
+.trae-edit-toolbar-button-active:hover {
+  background: var(--bg-bg-brand-popup, rgba(170, 183, 255, 0.36)) !important;
+}
+
+.trae-edit-toolbar button[data-action='alignment-dropdown']:hover,
+.trae-edit-toolbar button[data-action='text-align-dropdown']:hover,
+.trae-edit-toolbar button[data-action='font-decrease']:hover,
+.trae-edit-toolbar button[data-action='font-increase']:hover,
+.trae-edit-toolbar button[data-action^='align-']:hover {
+  border-radius: 8px;
+  background: var(--bg-bg-overlay-l1, rgba(115, 115, 115, 0.08)) !important;
+}
+
+.trae-edit-toolbar button[data-action='alignment-dropdown']:active,
+.trae-edit-toolbar button[data-action='text-align-dropdown']:active,
+.trae-edit-toolbar button[data-action='font-decrease']:active,
+.trae-edit-toolbar button[data-action='font-increase']:active,
+.trae-edit-toolbar button[data-action^='align-']:active {
+  border-radius: 8px;
+  background: var(--bg-bg-overlay-l2, rgba(115, 115, 115, 0.12)) !important;
+}
+
+.trae-comment-input {
+  background: transparent;
+  color: var(--trae-text-default);
+  caret-color: var(--trae-text-default);
+}
+
+.trae-comment-input::placeholder {
+  color: var(--trae-text-tertiary);
+}
+
+.trae-point-edit-bar,
+.trae-point-comment-input-bar,
+.trae-comment-only-panel {
+  transform-origin: top center;
+  will-change: opacity, transform;
+}
+
+.trae-edit-panel:not(.trae-edit-panel-leave) {
+  pointer-events: auto !important;
+}
+
+.trae-edit-bar-enter {
+  animation: trae-edit-bar-enter var(--transition-normal, 0.18s cubic-bezier(0.2, 0, 0, 1)) both;
+}
+
+.trae-edit-bar-leave {
+  pointer-events: none;
+  animation: trae-edit-bar-leave var(--transition-fast, 0.14s ease) both;
+}
+
+.trae-edit-panel-leave {
+  pointer-events: none;
+  animation: trae-edit-panel-leave var(--transition-fast, 0.14s ease) both;
+}
+
+.trae-edit-panel [data-trae-tooltip] {
+  position: relative;
+}
+
+.trae-edit-panel [data-trae-tooltip]::after {
+  content: attr(data-trae-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: var(--trae-layer-edit-tooltip);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--trae-bg-invert, var(--bg-bg-invert));
+  color: var(--trae-text-onaccent, var(--text-text-onaccent));
+  box-shadow: var(--trae-floating-shadow);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.039px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateX(-50%);
+  visibility: hidden;
+}
+
+.trae-edit-panel [data-trae-tooltip]::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 5px);
+  z-index: var(--trae-layer-edit-tooltip);
+  width: 8px;
+  height: 4px;
+  background: var(--trae-bg-invert, var(--bg-bg-invert));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.trae-edit-panel [data-trae-tooltip]:hover::after,
+.trae-edit-panel [data-trae-tooltip]:focus-visible::after,
+.trae-edit-panel [data-trae-tooltip]:hover::before,
+.trae-edit-panel [data-trae-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+.trae-comment-btn {
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trae-comment-btn:disabled {
+  cursor: not-allowed;
+}
+
+.trae-comment-btn:focus-visible {
+  outline: 2px solid var(--trae-status-primary);
+  outline-offset: 1px;
+}
+
+.trae-comment-btn-primary {
+  background: var(--trae-bg-invert);
+  color: var(--trae-text-onaccent);
+}
+
+.trae-comment-btn-primary:hover:not(:disabled) {
+  background: var(--trae-bg-invert-hover);
+}
+
+.trae-comment-btn-primary:active:not(:disabled) {
+  background: var(--trae-bg-invert-active);
+}
+
+.trae-comment-btn-primary:disabled {
+  background: var(--trae-bg-invert-disabled);
+  color: var(--trae-text-disabled);
+}
+
+.trae-comment-btn-secondary {
+  background: var(--trae-bg-overlay-l2);
+  color: var(--trae-text-default);
+}
+
+.trae-comment-btn-secondary:hover:not(:disabled) {
+  background: var(--trae-bg-overlay-l3);
+}
+
+.trae-comment-btn-secondary:active:not(:disabled) {
+  background: var(--trae-bg-overlay-l4);
+}
+
+.trae-comment-btn-secondary:disabled {
+  background: var(--trae-bg-overlay-l2);
+  color: var(--trae-text-disabled);
+}
+
+.trae-comment-btn-text {
+  background: transparent;
+  color: var(--trae-text-default);
+}
+
+.trae-comment-btn-text:hover:not(:disabled) {
+  border-radius: 8px;
+  background: var(--bg-bg-overlay-l1, var(--trae-bg-overlay-l1));
+  color: var(--trae-text-default-hover);
+}
+
+.trae-comment-btn-text:active:not(:disabled) {
+  border-radius: 8px;
+  background: var(--trae-bg-overlay-l2);
+  color: var(--trae-text-default-active);
+}
+
+.trae-comment-btn-text:disabled {
+  background: transparent;
+  color: var(--trae-text-disabled);
+}
+
+.trae-marking-btn {
+  justify-content: center;
+}
+
+.trae-marking-btn:hover:not(:disabled) {
+  background: var(--trae-bg-overlay-l1) !important;
+}
+
+.trae-marking-btn-active {
+  background: var(--bg-bg-brand-disabled, rgba(75, 63, 227, 0.22)) !important;
+  color: var(--icon-icon-brand, var(--trae-icon-brand)) !important;
+}
+
+.trae-marking-btn-active:hover {
+  background: var(--bg-bg-brand-popup, rgba(170, 183, 255, 0.36)) !important;
+  color: var(--icon-icon-brand, var(--trae-icon-brand)) !important;
+}
+
+.trae-marking-btn:active:not(:disabled) {
+  background: var(--trae-bg-overlay-l2) !important;
+}
+
+.trae-marking-btn:disabled {
+  color: var(--trae-text-disabled) !important;
+  cursor: not-allowed !important;
+}
+
+.trae-action-button-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--trae-icon-secondary);
+  flex-shrink: 0;
+}
+
+.trae-shortcut-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.trae-shortcut-key {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 12px;
+  color: var(--trae-icon-secondary);
+}
+
+.trae-add-to-chat-divider {
+  width: 2px;
+  height: 12px;
+  padding: 0 6px;
+  box-sizing: content-box;
+  background-clip: content-box;
+  background-color: var(--trae-border-l2);
+  flex-shrink: 0;
+}
+
+.trae-editor-view {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  padding: 8px;
+  background: transparent;
+}
+
+.trae-editor-text-container {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: var(--trae-bg-overlay-l1);
+  border: 1px solid var(--trae-border-l3);
+  border-radius: 4px;
+  gap: 8px;
+}
+
+.trae-editor-textarea {
+  flex: 1;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--trae-text-default);
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+  max-height: 140px;
+}
+
+.trae-editor-textarea::placeholder {
+  color: var(--trae-text-tertiary);
+}
+
+.trae-editor-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.2s ease-out,
+    opacity 0.2s ease-out,
+    margin-top 0.2s ease-out;
+}
+
+.trae-editor-action-bar-visible {
+  max-height: 32px;
+  opacity: 1;
+  margin-top: 8px;
+}
+
+.trae-editor-cancel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 4px;
+  background: var(--trae-bg-overlay-l2);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trae-editor-cancel-button:hover {
+  background: var(--trae-bg-overlay-l3);
+}
+
+.trae-editor-cancel-button:active {
+  background: var(--trae-bg-overlay-l3);
+}
+
+.trae-editor-cancel-button:focus-visible {
+  outline: 2px solid var(--trae-status-primary);
+  outline-offset: 1px;
+}
+
+.trae-editor-cancel-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--trae-text-default);
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.trae-editor-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--trae-bg-invert);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trae-editor-submit-button:hover {
+  background: var(--trae-bg-invert-hover);
+}
+
+.trae-editor-submit-button:active {
+  background: var(--trae-bg-invert-active);
+}
+
+.trae-editor-submit-button:focus-visible {
+  outline: 2px solid var(--trae-status-primary);
+  outline-offset: 1px;
+}
+
+.trae-editor-submit-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--trae-text-onaccent);
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.trae-editor-submit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--trae-icon-onaccent);
+  flex-shrink: 0;
+}
+
+.trae-success-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  white-space: nowrap;
+}
+
+.trae-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--trae-status-success);
+  flex-shrink: 0;
+}
+
+.trae-success-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--trae-text-default);
+  user-select: none;
+}
+</style><style data-trae-pptx-captured-css="true">*, ::before, ::after { box-sizing: border-box; }
+:root { --bg: #f4f5f7; --card: #ffffff; --text: #171a1f; --muted: #697180; --line: #e3e6ea; --field: #fbfbfc; --accent: #2563eb; --accent-weak: #eaf1fe; --good: #12944a; --mid: #c2760a; --bad: #d92d20; --toutiao: #e23a35; --wechat: #0a9a4c; --notice-bg: #fdf6e3; --notice-line: #efe0b6; --notice-text: #7a5a12; --shadow: 0 1px 2px rgba(16,24,40,.04),0 8px 24px -16px rgba(16,24,40,.18); --radius: 14px; }
+html[data-theme="dark"] { --bg: #0f1215; --card: #171b1f; --text: #e7eaee; --muted: #98a1ac; --line: #282e35; --field: #1c2127; --accent: #5b93f7; --accent-weak: #1a2637; --good: #35c07a; --mid: #e0a13a; --bad: #f2705f; --toutiao: #f2605b; --wechat: #2fbf74; --notice-bg: #251f12; --notice-line: #3b3218; --notice-text: #e3c283; --shadow: 0 1px 2px rgba(0,0,0,.3),0 10px 30px -18px rgba(0,0,0,.7); }
+html, body { height: 100%; }
+body { margin: 0px; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.65; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizelegibility; }
+.wrap { max-width: 980px; margin: 0px auto; padding: 20px 16px 72px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0px; }
+.logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: rgb(255, 255, 255); display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: 0 0 auto; }
+h1 { font-size: 18px; margin: 0px; font-weight: 650; letter-spacing: 0.2px; }
+.sub { margin: 2px 0px 0px; font-size: 12.5px; color: var(--muted); }
+.disclaimer { border: 1px solid var(--notice-line); background: var(--notice-bg); color: var(--notice-text); border-radius: 12px; padding: 10px 13px; font-size: 12.5px; line-height: 1.6; margin: 0px 0px 14px; }
+.disclaimer b { font-weight: 650; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card-head { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-bottom: 12px; }
+.card-head h2 { font-size: 14.5px; margin: 0px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.step { width: 20px; height: 20px; border-radius: 6px; background: var(--accent-weak); color: var(--accent); font-size: 11.5px; font-weight: 700; display: grid; place-items: center; flex: 0 0 auto; }
+.counter { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.counter.over { color: var(--bad); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label.fl { display: block; font-size: 12px; color: var(--muted); margin: 0px 0px 5px; font-weight: 500; }
+input[type="text"], input[type="password"], select, textarea { width: 100%; background: var(--field); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 13.5px; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+textarea { min-height: 280px; resize: vertical; line-height: 1.75; font-size: 14.5px; padding: 12px 13px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.75; }
+.hint { font-size: 11.5px; color: var(--muted); margin: 6px 0px 0px; line-height: 1.6; }
+.btn { appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 8px 14px; border-radius: 10px; font-size: 13.5px; font-family: inherit; font-weight: 500; cursor: pointer; transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.05s; white-space: nowrap; }
+.btn:hover { border-color: rgb(201, 206, 214); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: rgb(255, 255, 255); font-weight: 600; padding: 9px 20px; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.spacer { flex: 1 1 0%; }
+.seg { display: inline-flex; background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { appearance: none; border: 0px; background: transparent; color: var(--muted); font-family: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--text); box-shadow: rgba(16, 24, 40, 0.08) 0px 1px 2px; font-weight: 600; }
+.check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
+.check input { accent-color: var(--accent); width: 15px; height: 15px; }
+.status { border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 16px; border: 1px solid var(--line); background: var(--card); display: flex; gap: 10px; align-items: flex-start; }
+.status[hidden] { display: none; }
+.status.error { border-color: rgba(217, 45, 32, 0.35); background: rgba(217, 45, 32, 0.07); color: var(--bad); }
+.status.warn { border-color: rgba(194, 118, 10, 0.35); background: rgba(194, 118, 10, 0.08); color: var(--mid); }
+.status.info { color: var(--muted); }
+.status .msg { flex: 1 1 0%; min-width: 0px; word-break: break-word; }
+.status .msg b { font-weight: 650; }
+.spinner { width: 15px; height: 15px; border-top-style: ; border-top-width: ; border-right-color: ; border-right-style: ; border-right-width: ; border-bottom-color: ; border-bottom-style: ; border-bottom-width: ; border-left-color: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; border-top-color: var(--accent); border-radius: 50%; animation: 0.8s linear 0s infinite normal none running spin; flex: 0 0 auto; margin-top: 3px; }
+@keyframes spin { 
+  100% { transform: rotate(360deg); }
+}
+pre.stream { margin: 10px 0px 0px; max-height: 180px; overflow: auto; background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 11.5px; line-height: 1.5; color: var(--muted); white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+#results[hidden] { display: none; }
+.group { margin-bottom: 14px; }
+.group-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; margin: 0px 0px 10px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; display: inline-block; }
+.sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.score-card { border: 1px solid var(--line); background: var(--field); border-radius: 12px; padding: 14px; }
+.score-top { display: flex; gap: 13px; align-items: flex-start; }
+.ring { position: relative; width: 62px; height: 62px; flex: 0 0 auto; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+.ring .bg { stroke: var(--line); }
+.ring .fg { stroke: var(--c); stroke-dasharray: 169.65; stroke-dashoffset: calc(169.65 - 169.65 * var(--p) / 100); transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.ring span { position: absolute; inset: 0px; display: grid; place-items: center; font-size: 17px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.score-meta { min-width: 0px; flex: 1 1 0%; }
+.score-name { font-size: 13.5px; font-weight: 650; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.badge { font-style: normal; font-size: 10.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); background: var(--card); padding: 1px 6px; border-radius: 999px; letter-spacing: 0.2px; }
+.score-comment { margin: 4px 0px 0px; font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+.points { margin: 11px 0px 0px; padding-left: 17px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.points li { margin: 3px 0px; }
+.points li::marker { color: var(--line); }
+.ai-inner .score-name { font-size: 14px; }
+.sec-title { font-size: 13.5px; font-weight: 650; margin: 0px 0px 10px; display: flex; align-items: center; gap: 8px; }
+ol.sugg { margin: 0px; padding-left: 20px; font-size: 13.5px; }
+ol.sugg li { margin: 6px 0px; }
+.note { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.note > div { border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px; background: var(--field); font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+.note b { display: flex; align-items: center; gap: 7px; color: var(--text); font-size: 12.5px; margin-bottom: 4px; font-weight: 650; }
+.meta { font-size: 11.5px; color: var(--muted); margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; border-top: 1px dashed var(--line); padding-top: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+details.card { padding: 0px; overflow: hidden; }
+details.card > summary { cursor: pointer; padding: 15px 16px; font-size: 14px; font-weight: 650; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::after { content: "展开"; font-size: 12px; font-weight: 500; color: var(--accent); }
+details.card[open] > summary::after { content: "收起"; }
+details.card > summary:hover { background: var(--field); }
+.doc { padding: 0px 16px 18px; font-size: 13px; color: var(--muted); line-height: 1.8; }
+.doc h3 { font-size: 12.5px; color: var(--text); margin: 14px 0px 4px; font-weight: 650; }
+.doc h3:first-child { margin-top: 0px; }
+.doc ul, .doc ol { margin: 4px 0px; padding-left: 20px; }
+.doc li { margin: 3px 0px; }
+.doc code { background: var(--field); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.doc b { color: var(--text); font-weight: 650; }
+footer { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 26px; line-height: 1.8; }
+@media (max-width: 720px) {
+  .wrap { padding: 14px 12px 56px; }
+  .grid2, .sgrid, .note { grid-template-columns: 1fr; }
+  h1 { font-size: 16.5px; }
+  .sub { display: none; }
+  textarea { min-height: 220px; }
+  .row .spacer { display: none; }
+  .row .btn.primary { flex: 1 1 0%; order: 9; }
+  .card { padding: 14px; }
+  .score-card { padding: 12px; }
+}
+:root { --trae-layer-image-download: 89990; --trae-layer-browser-inspect-overlay: 90000; --trae-layer-browser-inspect-highlight: 90010; --trae-layer-browser-inspect-action: 90020; --trae-layer-text-selection-action: 90030; --trae-layer-edit-tooltip: 100095; }
+:root, [data-trae-theme="dark"] { --trae-bg-base-default: #171717; --trae-bg-menu: #222427; --trae-bg-overlay-l1: rgba(255, 255, 255, 0.04); --trae-bg-overlay-l2: rgba(255, 255, 255, 0.08); --trae-bg-overlay-l3: rgba(255, 255, 255, 0.12); --trae-bg-overlay-l4: rgba(255, 255, 255, 0.16); --trae-bg-invert: #f5f9fe; --trae-bg-invert-hover: #e8ecf0; --trae-bg-invert-active: #dce0e4; --trae-bg-invert-disabled: rgba(224, 226, 242, 0.12); --bg-bg-brand-disabled: rgba(75, 63, 227, 0.35); --bg-bg-brand-popup: rgba(106, 111, 255, 0.15); --trae-border-l1: #e0e2f217; --trae-border-l2: rgba(255, 255, 255, 0.12); --trae-border-l3: rgba(255, 255, 255, 0.08); --trae-border-neutral-l3: rgba(229, 229, 229, 0.20); --trae-border-brand: #6a6fff; --trae-text-default: #f5f9fe; --trae-text-default-hover: #f5f9fe; --trae-text-default-active: #f5f9fe; --trae-text-secondary: rgba(245, 249, 254, 0.5); --trae-text-tertiary: rgba(245, 249, 254, 0.4); --trae-text-disabled: #666b75; --trae-text-onaccent: #222427; --trae-icon-default: #f5f9fe; --trae-icon-secondary: rgba(245, 249, 254, 0.5); --trae-icon-brand: #6a6fff; --icon-icon-brand: var(--trae-icon-brand); --trae-icon-onaccent: #222427; --trae-status-success: #22c55e; --trae-status-primary: #3b82f6; --trae-status-primary-default: #387bff; --trae-status-primary-surface-l1: rgba(53, 121, 255, 0.18); --trae-status-success-default: #33c192; --trae-status-success-surface-l1: rgba(0, 165, 110, 0.18); --trae-status-error-default: #f65a5a; --trae-status-error-surface-l1: rgba(246, 70, 70, 0.18); --trae-annotation-marker-bg: #4b3fe3; --trae-annotation-marker-text: #ffffff; --trae-annotation-region-border: var(--trae-status-primary-default); --trae-region-outside-mask-bg: rgba(0, 0, 0, 0.32); --trae-panel-shadow: 0px 6px 24px -1px rgba(0, 0, 0, 0.16); --trae-floating-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.2); --trae-shadow-elevation-50: 0 1px 2px -1px rgba(0, 0, 0, 0.45); --text-text-default: var(--trae-text-default); --text-text-onaccent: var(--trae-text-onaccent); --bg-bg-menu: var(--trae-bg-menu); --bg-bg-white: var(--trae-bg-menu); --bg-bg-invert: var(--trae-bg-invert); --bg-bg-invert-disabled: var(--trae-bg-invert-disabled); --bg-bg-overlay-l1: var(--trae-bg-overlay-l1); --bg-bg-overlay-l2: var(--trae-bg-overlay-l2); --bg-bg-overlay-l3: var(--trae-bg-overlay-l3); --border-border-neutral-l1: var(--trae-border-l1); --border-border-brand: var(--trae-border-brand); --border-border-brand-half: rgba(106, 111, 255, 0.4); --status-error-default: var(--trae-status-error-default); --status-error-surface-l1: var(--trae-status-error-surface-l1); --radius-radius-md-12: 12px; --spacers-spacer-0: 0; --spacers-spacer-6: 6px; }
+[data-trae-theme="light"] { --trae-bg-base-default: #fafafa; --trae-bg-menu: #ffffff; --trae-bg-overlay-l1: rgba(0, 0, 0, 0.04); --trae-bg-overlay-l2: rgba(0, 0, 0, 0.06); --trae-bg-overlay-l3: rgba(0, 0, 0, 0.08); --trae-bg-overlay-l4: rgba(0, 0, 0, 0.12); --trae-bg-invert: #1f2328; --trae-bg-invert-hover: #32383f; --trae-bg-invert-active: #444d56; --trae-bg-invert-disabled: rgba(115, 115, 115, 0.20); --bg-bg-brand-disabled: rgba(75, 63, 227, 0.22); --bg-bg-brand-popup: rgba(170, 183, 255, 0.36); --trae-border-l1: rgba(0, 0, 0, 0.1); --trae-border-l2: rgba(0, 0, 0, 0.12); --trae-border-l3: rgba(0, 0, 0, 0.08); --trae-border-neutral-l3: rgba(115, 115, 115, 0.36); --trae-border-brand: #4b3fe3; --trae-text-default: #1f2328; --trae-text-default-hover: #111214; --trae-text-default-active: #111214; --trae-text-secondary: rgba(31, 35, 40, 0.5); --trae-text-tertiary: rgba(31, 35, 40, 0.4); --trae-text-disabled: #a1a1a1; --trae-text-onaccent: #ffffff; --trae-icon-default: #1f2328; --trae-icon-secondary: rgba(31, 35, 40, 0.5); --trae-icon-brand: #4b3fe3; --icon-icon-brand: var(--trae-icon-brand); --trae-icon-onaccent: #ffffff; --trae-status-success: #22c55e; --trae-status-primary: #3b82f6; --trae-status-primary-default: #2f74ff; --trae-status-primary-surface-l1: rgba(47, 116, 255, 0.12); --trae-status-success-default: #15a877; --trae-status-success-surface-l1: rgba(64, 176, 139, 0.12); --trae-status-error-default: #e8463a; --trae-status-error-surface-l1: rgba(232, 70, 58, 0.12); --trae-annotation-marker-bg: #4b3fe3; --trae-annotation-marker-text: #ffffff; --trae-annotation-region-border: var(--trae-status-primary-default); --trae-region-outside-mask-bg: rgba(0, 0, 0, 0.18); --trae-panel-shadow: 0px 6px 24px -1px rgba(24, 24, 24, 0.06); --trae-floating-shadow: 0px 2px 8px 0px rgba(24, 24, 24, 0.2); --trae-shadow-elevation-50: 0 1px 2px -1px rgba(24, 24, 24, 0.08); --text-text-default: var(--trae-text-default); --text-text-onaccent: var(--trae-text-onaccent); --bg-bg-menu: var(--trae-bg-menu); --bg-bg-white: var(--trae-bg-menu); --bg-bg-invert: var(--trae-bg-invert); --bg-bg-invert-disabled: var(--trae-bg-invert-disabled); --bg-bg-overlay-l1: var(--trae-bg-overlay-l1); --bg-bg-overlay-l2: var(--trae-bg-overlay-l2); --bg-bg-overlay-l3: var(--trae-bg-overlay-l3); --border-border-neutral-l1: var(--trae-border-l1); --border-border-brand: var(--trae-border-brand); --border-border-brand-half: rgba(75, 63, 227, 0.4); --status-error-default: var(--trae-status-error-default); --status-error-surface-l1: var(--trae-status-error-surface-l1); --radius-radius-md-12: 12px; --spacers-spacer-0: 0; --spacers-spacer-6: 6px; }
+@keyframes trae-spin { 
+  100% { transform: rotate(360deg); }
+}
+@keyframes trae-edit-bar-enter { 
+  0% { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0px) scale(1); }
+}
+@keyframes trae-edit-bar-leave { 
+  0% { opacity: 1; transform: translateY(0px) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+@keyframes trae-edit-panel-leave { 
+  0% { opacity: 1; transform: translateY(0px) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+.trae-edit-mode-active:not(.trae-edit-mode-dragging) body :not([data-trae-edit-ui]):not([data-trae-edit-ui] *) { transition: none !important; animation-play-state: paused !important; }
+.trae-edit-mode-reorder-hit-test [data-trae-edit-ui]:not(.trae-edit-pointer-shield):not(.trae-edit-panel), .trae-edit-mode-reorder-hit-test [data-trae-edit-ui]:not(.trae-edit-pointer-shield):not(.trae-edit-panel) * { pointer-events: none !important; }
+.trae-browser-inspect-overlay { position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; z-index: var(--trae-layer-browser-inspect-overlay); pointer-events: auto; background: transparent; }
+.trae-browser-inspect-highlight-box { position: absolute; top: 0px; left: 0px; z-index: var(--trae-layer-browser-inspect-highlight); display: none; }
+.trae-browser-inspect-highlight-tag { position: absolute; left: 0px; top: 0px; height: 18px; padding: 0px 6px; box-sizing: border-box; border-radius: 4px; background-color: var(--trae-status-success-default); color: var(--trae-text-onaccent); font-size: 12px; font-weight: 400; display: none; align-items: center; z-index: var(--trae-layer-browser-inspect-action); }
+.trae-browser-inspect-highlight-box-show { display: flex; }
+.trae-browser-inspect-highlight-tag.trae-browser-inspect-highlight-box-show { display: none; }
+.trae-browser-inspect-select-button.trae-browser-inspect-highlight-box-show { display: block !important; }
+.trae-browser-inspect-select-button { position: absolute; top: 0px; left: 0px; display: none; z-index: var(--trae-layer-browser-inspect-action); }
+.trae-browser-inspect-select-highlight-box { background: transparent !important; }
+.trae-browser-inspect-select-highlight-box .trae-browser-inspect-highlight-tag { background-color: var(--trae-status-success-default); }
+.trae-add-to-chat-card { display: block; overflow: hidden; background: var(--trae-bg-menu); border: 1px solid var(--trae-border-l1); border-radius: 8px; box-shadow: var(--trae-floating-shadow); transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), height 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.trae-add-to-chat-content { position: relative; width: max-content; }
+.trae-fade-exit { opacity: 0; transition: opacity 0.15s ease-out; }
+.trae-fade-enter { opacity: 1; transition: opacity 0.2s ease-in; }
+.trae-buttons-view { display: flex; align-items: center; gap: 6px; padding: 4px; background: transparent; }
+.trae-action-button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: transparent; border: none; border-radius: 4px; cursor: pointer; transform: none !important; transition: none !important; animation: auto ease 0s 1 normal none running none !important; }
+.trae-action-button:hover { background: var(--trae-bg-overlay-l2); }
+.trae-action-button:active { background: var(--trae-bg-overlay-l3); }
+.trae-action-button:focus-visible { outline: 2px solid var(--trae-status-primary); outline-offset: 1px; }
+.trae-action-button-icon { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: var(--trae-icon-default); flex-shrink: 0; }
+.trae-action-button-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 500; line-height: 16px; color: var(--trae-text-default); white-space: nowrap; }
+.trae-edit-toolbar-button-active { background: var(--bg-bg-brand-disabled, rgba(75, 63, 227, 0.22)) !important; color: var(--icon-icon-brand, #4b3fe3) !important; font-weight: bold !important; }
+.trae-edit-toolbar-button-active:hover { background: var(--bg-bg-brand-popup, rgba(170, 183, 255, 0.36)) !important; }
+.trae-edit-toolbar button[data-action="alignment-dropdown"]:hover, .trae-edit-toolbar button[data-action="text-align-dropdown"]:hover, .trae-edit-toolbar button[data-action="font-decrease"]:hover, .trae-edit-toolbar button[data-action="font-increase"]:hover, .trae-edit-toolbar button[data-action^="align-"]:hover { border-radius: 8px; background: var(--bg-bg-overlay-l1, rgba(115, 115, 115, 0.08)) !important; }
+.trae-edit-toolbar button[data-action="alignment-dropdown"]:active, .trae-edit-toolbar button[data-action="text-align-dropdown"]:active, .trae-edit-toolbar button[data-action="font-decrease"]:active, .trae-edit-toolbar button[data-action="font-increase"]:active, .trae-edit-toolbar button[data-action^="align-"]:active { border-radius: 8px; background: var(--bg-bg-overlay-l2, rgba(115, 115, 115, 0.12)) !important; }
+.trae-comment-input { background: transparent; color: var(--trae-text-default); caret-color: var(--trae-text-default); }
+.trae-comment-input::placeholder { color: var(--trae-text-tertiary); }
+.trae-point-edit-bar, .trae-point-comment-input-bar, .trae-comment-only-panel { transform-origin: center top; will-change: opacity, transform; }
+.trae-edit-panel:not(.trae-edit-panel-leave) { pointer-events: auto !important; }
+.trae-edit-bar-enter { animation: trae-edit-bar-enter var(--transition-normal, 0.18s cubic-bezier(0.2, 0, 0, 1)) both; }
+.trae-edit-bar-leave { pointer-events: none; animation: trae-edit-bar-leave var(--transition-fast, 0.14s ease) both; }
+.trae-edit-panel-leave { pointer-events: none; animation: trae-edit-panel-leave var(--transition-fast, 0.14s ease) both; }
+.trae-edit-panel [data-trae-tooltip] { position: relative; }
+.trae-edit-panel [data-trae-tooltip]::after { content: attr(data-trae-tooltip); position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: var(--trae-layer-edit-tooltip); padding: 6px 10px; border-radius: 6px; background: var(--trae-bg-invert, var(--bg-bg-invert)); color: var(--trae-text-onaccent, var(--text-text-onaccent)); box-shadow: var(--trae-floating-shadow); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif; font-size: 11px; font-weight: 500; line-height: 16px; letter-spacing: 0.039px; white-space: nowrap; pointer-events: none; box-sizing: border-box; opacity: 0; transform: translateX(-50%); visibility: hidden; }
+.trae-edit-panel [data-trae-tooltip]::before { content: ""; position: absolute; left: 50%; bottom: calc(100% + 5px); z-index: var(--trae-layer-edit-tooltip); width: 8px; height: 4px; background: var(--trae-bg-invert, var(--bg-bg-invert)); clip-path: polygon(0px 0px, 100% 0px, 50% 100%); transform: translateX(-50%); pointer-events: none; opacity: 0; visibility: hidden; }
+.trae-edit-panel [data-trae-tooltip]:hover::after, .trae-edit-panel [data-trae-tooltip]:focus-visible::after, .trae-edit-panel [data-trae-tooltip]:hover::before, .trae-edit-panel [data-trae-tooltip]:focus-visible::before { opacity: 1; visibility: visible; }
+.trae-comment-btn { justify-content: center; cursor: pointer; transition: background-color 0.15s; }
+.trae-comment-btn:disabled { cursor: not-allowed; }
+.trae-comment-btn:focus-visible { outline: 2px solid var(--trae-status-primary); outline-offset: 1px; }
+.trae-comment-btn-primary { background: var(--trae-bg-invert); color: var(--trae-text-onaccent); }
+.trae-comment-btn-primary:hover:not(:disabled) { background: var(--trae-bg-invert-hover); }
+.trae-comment-btn-primary:active:not(:disabled) { background: var(--trae-bg-invert-active); }
+.trae-comment-btn-primary:disabled { background: var(--trae-bg-invert-disabled); color: var(--trae-text-disabled); }
+.trae-comment-btn-secondary { background: var(--trae-bg-overlay-l2); color: var(--trae-text-default); }
+.trae-comment-btn-secondary:hover:not(:disabled) { background: var(--trae-bg-overlay-l3); }
+.trae-comment-btn-secondary:active:not(:disabled) { background: var(--trae-bg-overlay-l4); }
+.trae-comment-btn-secondary:disabled { background: var(--trae-bg-overlay-l2); color: var(--trae-text-disabled); }
+.trae-comment-btn-text { background: transparent; color: var(--trae-text-default); }
+.trae-comment-btn-text:hover:not(:disabled) { border-radius: 8px; background: var(--bg-bg-overlay-l1, var(--trae-bg-overlay-l1)); color: var(--trae-text-default-hover); }
+.trae-comment-btn-text:active:not(:disabled) { border-radius: 8px; background: var(--trae-bg-overlay-l2); color: var(--trae-text-default-active); }
+.trae-comment-btn-text:disabled { background: transparent; color: var(--trae-text-disabled); }
+.trae-marking-btn { justify-content: center; }
+.trae-marking-btn:hover:not(:disabled) { background: var(--trae-bg-overlay-l1) !important; }
+.trae-marking-btn-active { background: var(--bg-bg-brand-disabled, rgba(75, 63, 227, 0.22)) !important; color: var(--icon-icon-brand, var(--trae-icon-brand)) !important; }
+.trae-marking-btn-active:hover { background: var(--bg-bg-brand-popup, rgba(170, 183, 255, 0.36)) !important; color: var(--icon-icon-brand, var(--trae-icon-brand)) !important; }
+.trae-marking-btn:active:not(:disabled) { background: var(--trae-bg-overlay-l2) !important; }
+.trae-marking-btn:disabled { color: var(--trae-text-disabled) !important; cursor: not-allowed !important; }
+.trae-action-button-shortcut { display: flex; align-items: center; gap: 2px; color: var(--trae-icon-secondary); flex-shrink: 0; }
+.trae-shortcut-container { display: flex; align-items: center; gap: 2px; }
+.trae-shortcut-key { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 500; line-height: 12px; color: var(--trae-icon-secondary); }
+.trae-add-to-chat-divider { width: 2px; height: 12px; padding: 0px 6px; box-sizing: content-box; background-clip: content-box; background-color: var(--trae-border-l2); flex-shrink: 0; }
+.trae-editor-view { display: flex; flex-direction: column; width: 320px; padding: 8px; background: transparent; }
+.trae-editor-text-container { display: flex; align-items: center; padding: 8px; background: var(--trae-bg-overlay-l1); border: 1px solid var(--trae-border-l3); border-radius: 4px; gap: 8px; }
+.trae-editor-textarea { flex: 1 1 0%; padding: 0px 2px; border: none; background: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; font-weight: 400; line-height: 20px; color: var(--trae-text-default); resize: none; outline: none; overflow-y: auto; max-height: 140px; }
+.trae-editor-textarea::placeholder { color: var(--trae-text-tertiary); }
+.trae-editor-action-bar { display: flex; align-items: center; justify-content: flex-end; gap: 4px; max-height: 0px; opacity: 0; overflow: hidden; transition: max-height 0.2s ease-out, opacity 0.2s ease-out, margin-top 0.2s ease-out; }
+.trae-editor-action-bar-visible { max-height: 32px; opacity: 1; margin-top: 8px; }
+.trae-editor-cancel-button { display: flex; align-items: center; justify-content: center; height: 24px; padding: 0px 4px; background: var(--trae-bg-overlay-l2); border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.15s; }
+.trae-editor-cancel-button:hover { background: var(--trae-bg-overlay-l3); }
+.trae-editor-cancel-button:active { background: var(--trae-bg-overlay-l3); }
+.trae-editor-cancel-button:focus-visible { outline: 2px solid var(--trae-status-primary); outline-offset: 1px; }
+.trae-editor-cancel-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 500; line-height: 16px; color: var(--trae-text-default); white-space: nowrap; padding: 0px 4px; }
+.trae-editor-submit-button { display: flex; align-items: center; justify-content: center; height: 24px; padding: 0px 8px; background: var(--trae-bg-invert); border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.15s; }
+.trae-editor-submit-button:hover { background: var(--trae-bg-invert-hover); }
+.trae-editor-submit-button:active { background: var(--trae-bg-invert-active); }
+.trae-editor-submit-button:focus-visible { outline: 2px solid var(--trae-status-primary); outline-offset: 1px; }
+.trae-editor-submit-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 500; line-height: 16px; color: var(--trae-text-onaccent); white-space: nowrap; padding: 0px 4px; }
+.trae-editor-submit-icon { display: flex; align-items: center; justify-content: center; width: 12px; height: 12px; color: var(--trae-icon-onaccent); flex-shrink: 0; }
+.trae-success-view { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0px 12px; height: 32px; white-space: nowrap; }
+.trae-success-icon { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: var(--trae-status-success); flex-shrink: 0; }
+.trae-success-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; font-weight: 400; line-height: 18px; color: var(--trae-text-default); user-select: none; }</style></head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">评</div>
+      <div>
+        <h1>文章双平台评分器</h1>
+        <p class="sub">今日头条 / 微信公众号双视角 · 准确性 · 原创度 · AI 重合度</p>
+      </div>
+    </div>
+    <button class="btn ghost sm" id="btnTheme" type="button" title="切换明暗主题">深色</button>
+  </div>
+
+  <!-- 1. 输入 -->
+  <section class="card">
+    <div class="card-head">
+      <h2><span class="step">1</span>粘贴文章</h2>
+      <span class="counter" id="counter">0 / 10000</span>
+    </div>
+    <textarea id="article" placeholder="在此粘贴或输入文章全文（建议 1 万字符以内）……"></textarea>
+    <div class="row">
+      <button class="btn ghost sm" type="button" id="btnSample">填入示例文章</button>
+      <button class="btn ghost sm" type="button" id="btnClear">清空</button>
+      <span class="spacer"></span>
+      <button class="btn primary" type="button" id="btnScore">开始评分</button>
+    </div>
+    <p class="hint" id="engineHint">当前引擎：免 Key 自动 · 公共免费接口（无需任何配置）</p>
+  </section>
+
+  <!-- 高级设置 -->
+  <details class="card" id="cfgCard">
+    <summary>高级设置 · 评分引擎（默认免 Key 自动，一般无需修改）</summary>
+    <div class="doc" style="padding-top:2px">
+      <div class="seg" role="group" aria-label="评分模式" style="margin-bottom:12px">
+        <button type="button" id="modeAuto" aria-pressed="true">免 Key 自动</button>
+        <button type="button" id="modeLLM" aria-pressed="false">自定义 API</button>
+        <button type="button" id="modeLocal" aria-pressed="false">本地规则</button>
+      </div>
+
+      <div id="autoFields">
+        <p class="hint" style="margin:0">
+          开箱即用：点击「开始评分」即自动联网，使用公共免费接口打分（OpenAI 兼容，无需 Key、无需注册）。
+          该接口是免费公共服务，有频率限制（同一 IP 约每 45 秒 1 次），遇限流会自动排队重试；若持续失败，可切到「自定义 API」或「本地规则」。
+        </p>
+      </div>
+
+      <div id="llmFields" hidden="">
+        <div class="grid2">
+          <div>
+            <label class="fl" for="base">API Base URL</label>
+            <input type="text" id="base" autocomplete="off" spellcheck="false" placeholder="https://api.deepseek.com/v1">
+          </div>
+          <div>
+            <label class="fl" for="model">模型名</label>
+            <input type="text" id="model" autocomplete="off" spellcheck="false" placeholder="deepseek-chat">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <label class="fl" for="key">API Key（仅存本机 localStorage）</label>
+          <input type="password" id="key" autocomplete="off" spellcheck="false" placeholder="sk-...">
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="preset" style="max-width:290px" aria-label="服务商预设">
+            <option value="">选择服务商预设填入地址与模型</option>
+          <option value="0">DeepSeek</option><option value="1">通义千问（DashScope 兼容模式）</option><option value="2">OpenAI</option><option value="3">本地 Ollama</option></select>
+          <label class="check"><input type="checkbox" id="stream" checked="">流式输出（SSE）</label>
+          <button class="btn sm ghost" type="button" id="btnClearKey">清除密钥</button>
+        </div>
+        <p class="hint">兼容 OpenAI Chat Completions 协议，可对接 DeepSeek、通义千问、OpenAI、本地 Ollama 等。Key 只保存在当前浏览器，不会发往你配置的 API 之外的任何服务器。</p>
+      </div>
+
+      <div id="localFields" hidden="">
+        <p class="hint" style="margin:0">本地规则模式在浏览器内离线运行，不发送任何网络请求：<b>只对「AI 重合度」给出粗略估计</b>，准确性与原创度仅列出可核查的提示点，不打分。</p>
+      </div>
+    </div>
+  </details>
+
+  <!-- 状态 -->
+  <div class="status info" id="status" hidden="">
+    <div class="spinner" id="spin" hidden=""></div>
+    <div class="msg" id="statusMsg"></div>
+  </div>
+
+  <!-- 2. 结果 -->
+  <section id="results" hidden="">
+    <div class="card">
+      <div class="card-head">
+        <h2><span class="step">2</span>评分结果</h2>
+        <span class="counter" id="resultMode"></span>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="dot" style="background:var(--toutiao)"></span>今日头条视角</div>
+        <div class="sgrid" id="gToutiao"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="dot" style="background:var(--wechat)"></span>微信公众号视角</div>
+        <div class="sgrid" id="gWechat"></div>
+      </div>
+
+      <div class="group" style="margin-bottom:0">
+        <div class="group-head"><span class="dot" style="background:var(--muted)"></span>AI 重合度（全局）</div>
+        <div id="gAi"></div>
+      </div>
+
+      <div class="meta" id="metaLine"></div>
+      <div class="actions">
+        <button class="btn" type="button" id="btnCopyMd">复制 Markdown</button>
+        <button class="btn" type="button" id="btnCopyTxt">复制纯文本</button>
+        <button class="btn ghost" type="button" id="btnRetry">重新评分</button>
+      </div>
+    </div>
+
+    <div class="card" id="suggCard">
+      <div class="sec-title">综合建议</div>
+      <ol class="sugg" id="suggList"></ol>
+    </div>
+
+    <div class="card" id="noteCard">
+      <div class="sec-title">发布前重点</div>
+      <div class="note" id="noteList"></div>
+    </div>
+  </section>
+
+  <!-- 说明 -->
+  <details class="card">
+    <summary>使用说明 / 隐私说明</summary>
+    <div class="doc">
+      <h3>怎么用</h3>
+      <ol>
+        <li><b>不需要任何配置</b>：粘贴文章，点「开始评分」，页面会自动联网用公共免费接口打分（默认引擎「免 Key 自动」）。</li>
+        <li>文章建议 1 万字符以内，超长会被拦截；空内容、网络异常、限流都会有明确提示。</li>
+        <li>结果可一键复制为 Markdown 或纯文本；不满意可点「重新评分」重跑。</li>
+        <li>想要更稳定的效果，可展开「高级设置」切换到「自定义 API」（填自己的 Base URL / Key / 模型）或「本地规则」。</li>
+      </ol>
+
+      <h3>三种引擎</h3>
+      <ul>
+        <li><b>免 Key 自动（默认）</b>：调用公共免费接口 Pollinations（OpenAI 兼容协议），无需注册。匿名额度约为同一 IP 每 45 秒 1 次，被限流时页面会自动排队重试，最多 3 次。</li>
+        <li><b>自定义 API</b>：填自己的 Base URL / Key / 模型，可对接 DeepSeek、通义千问、OpenAI、本地 Ollama 等，速度与稳定性取决于你自己的服务。</li>
+        <li><b>本地规则</b>：完全离线，只用句式与关键词特征粗略估计 AI 重合度，准确性与原创度仅给提示、不打分。</li>
+      </ul>
+
+      <h3>评分口径</h3>
+      <ul>
+        <li><b>准确性</b>：数据 / 人名 / 公司 / 时间 / 政策是否可信，有无夸大与标题党式误导，逻辑是否自洽、结论有无依据。</li>
+        <li><b>原创度</b>：是否与网络常见模板高度重合，信息密度是否足够，观点与案例是否新鲜，是否只是换了词的重排。</li>
+        <li><b>AI 重合度</b>：<b>数值越高越像 AI 生成</b>。典型痕迹包括密集三连排比、对称套句、「值得注意的是 / 换句话说」类过渡、总分总模板、空洞金句、段落长度高度均匀、缺乏具体细节与个人化语气。</li>
+        <li><b>今日头条</b>更看重时效热点、具名公司与硬数据、可被反驳的明确判断；对标题党和情绪化容忍度较高，但反感泛泛而谈的行业观察。</li>
+        <li><b>微信公众号</b>更看重底层逻辑、结构清晰、读者获得感与原创观点；对标题党、低质洗稿零容忍。</li>
+      </ul>
+
+      <h3>颜色约定</h3>
+      <p style="margin:4px 0">绿 = 较好，橙 = 一般，红 = 需改进。AI 重合度做了方向反转：<b>分数越低越绿（越像真人写作）</b>，越高越红。</p>
+
+      <h3>隐私说明</h3>
+      <ul>
+        <li>本页面<b>没有自有后端、无埋点、无统计</b>，文章只会在浏览器与评分接口之间传输。</li>
+        <li><b>「免 Key 自动」模式</b>会把文章正文发送给第三方公共免费服务 Pollinations（<code>text.pollinations.ai</code>）以完成打分，请勿用它处理敏感或未公开内容；介意的请改用「自定义 API」或「本地规则」。</li>
+        <li>「自定义 API」模式只发送到你自己填写的 API 地址；「本地规则」模式全程离线，<b>不发出任何网络请求</b>。</li>
+        <li>API Key 与配置仅保存在当前浏览器的 <code>localStorage</code>，不会外发；可随时点「清除密钥」删除。</li>
+      </ul>
+
+      <h3>常见问题</h3>
+      <ul>
+        <li><b>提示「免费接口排队中」</b>：公共接口对匿名访问限流（约每 45 秒 1 次），页面会自动等待并重试；急着用就切到「自定义 API」。</li>
+        <li><b>返回被截断 / 不是 JSON</b>：免费模型输出长度有限，长评分可能截断。页面会自动尝试修复截断的 JSON（救回已返回的维度，缺失的显示「未评分」）；仍失败请点「重试」或换自定义 API。</li>
+        <li><b>免 Key 模式失败</b>：公共免费服务可能临时不可用，可稍后重试，或点「改用本地规则」立即拿到粗略结果。</li>
+        <li><b>提示网络失败 / CORS</b>：部分服务未开放浏览器跨域访问。可换用支持 CORS 的服务商；本地 Ollama 需设置 <code>OLLAMA_ORIGINS=*</code> 后重启。</li>
+        <li><b>401 / 403</b>：Key 错误或没有该模型权限。<b>404</b>：Base URL 少了 <code>/v1</code> 或多了路径。</li>
+        <li><b>部署到 GitHub Pages</b>：把本文件命名为 <code>index.html</code> 推到仓库，在 Settings → Pages 选择对应分支即可。</li>
+      </ul>
+    </div>
+  </details>
+
+  <div class="disclaimer">
+    <b>免责声明：</b>本评分由大模型或本地规则自动生成，仅供参考，<b>不构成事实核验或法律意见</b>。评分不能替代人工核查，发布前请自行核实文中的数据、引用与结论。<br>
+    <b>默认模式</b>会把文章正文发送到公共免费 AI 接口（Pollinations）完成打分；如需完全自控，可切换到「自定义 API」或「本地规则」。
+  </div>
+
+  <footer>
+    单文件纯前端应用 · 无后端 · 无依赖<br>
+    评分由模型自动生成，仅供参考，不构成事实核验或法律意见。
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var MAX_CHARS = 10000;
+  var CFG_KEY = 'article-score:cfg:v1';
+  var THEME_KEY = 'article-score:theme';
+  var TIMEOUT_MS = 180000;
+
+  /* ============ 系统提示词（评审口径） ============ */
+  var SYSTEM_PROMPT = '你是一位中文内容质量评审专家，熟悉今日头条与微信公众号的流量与审核规则。\n' +
+'用户会给你一篇文章。请仅依据文章正文，从以下维度打分（0–100，整数），并给出扣分点。\n\n' +
+'维度：\n' +
+'1. toutiao_accuracy：今日头条视角的准确性\n' +
+'2. toutiao_originality：今日头条视角的原创度\n' +
+'3. wechat_accuracy：微信公众号视角的准确性\n' +
+'4. wechat_originality：微信公众号视角的原创度\n' +
+'5. ai_similarity：AI 重合度（越高越像 AI 生成，0–100）\n\n' +
+'对每个维度给出：\n' +
+'- score（整数 0–100）\n' +
+'- comment（一句话总评）\n' +
+'- points（数组，2–4 条具体扣分点或亮点，要可操作）\n\n' +
+'额外输出：\n' +
+'- suggestions：数组，3–5 条针对两个平台的修改建议（具体、可执行）\n' +
+'- platform_note：对象，分别给 toutiao 与 wechat 各一句"这个平台发布前应重点改什么"\n\n' +
+'评分依据见维度定义（准确性=事实可核实/无误导；原创度=非洗稿/有独特性；AI重合度=排比套句/空话/结构套路等AI痕迹）。\n' +
+'不要编造文章里没有的数据。如果文章信息不足以判断某维度，在该维度 comment 中说明"信息不足"。\n' +
+'注意：points 每条控制在 30 字以内，suggestions 每条控制在 40 字以内，避免输出过长被截断。\n\n' +
+'只输出如下 JSON，不要有任何额外文字：\n' +
+'{\n' +
+'  "toutiao_accuracy": {"score":0,"comment":"","points":[]},\n' +
+'  "toutiao_originality": {"score":0,"comment":"","points":[]},\n' +
+'  "wechat_accuracy": {"score":0,"comment":"","points":[]},\n' +
+'  "wechat_originality": {"score":0,"comment":"","points":[]},\n' +
+'  "ai_similarity": {"score":0,"comment":"","points":[]},\n' +
+'  "suggestions": [],\n' +
+'  "platform_note": {"toutiao":"","wechat":""}\n' +
+'}';
+
+  var SAMPLE = '随着人工智能技术的快速发展，AI 写作工具正在成为内容行业不可忽视的力量。值得注意的是，这类工具不仅改变了写作的方式，也改变了内容生产的分工，甚至改变了一个人对于「原创」的理解。\n\n' +
+'首先，AI 写作提升了效率。其次，AI 写作降低了门槛。最后，AI 写作也带来了新的问题。换句话说，效率与质量之间，正在形成一种新的平衡。\n\n' +
+'据《中国内容创作者年度观察》显示，超过 68% 的创作者尝试过 AI 辅助写作，其中约 41% 的人表示会长期使用。这一数据背后，是内容供给的极大丰富，也是注意力竞争的进一步加剧。\n\n' +
+'不可否认，工具的进步从来不是单向的。它既带来了便利，也带来了同质化；既带来了规模，也带来了稀释；既带来了速度，也带来了对深度的牺牲。\n\n' +
+'归根结底，AI 写作不是要替代人，而是要把人从重复劳动中解放出来。真正重要的，仍然是你想说什么，以及你为什么这样说。';
+
+  var PRESETS = [
+    { name: 'DeepSeek', base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+    { name: '通义千问（DashScope 兼容模式）', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+    { name: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    { name: '本地 Ollama', base: 'http://localhost:11434/v1', model: 'qwen2.5:7b' }
+  ];
+
+  // 免 Key 公共接口（OpenAI 兼容协议，匿名可用，有频率限制）
+  var FREE = { url: 'https://text.pollinations.ai/openai', model: 'openai', label: '免 Key 自动' };
+
+  var DIM_ORDER = ['toutiao_accuracy', 'toutiao_originality', 'wechat_accuracy', 'wechat_originality', 'ai_similarity'];
+  var DIM_LABEL = {
+    toutiao_accuracy: '准确性',
+    toutiao_originality: '原创度',
+    wechat_accuracy: '准确性',
+    wechat_originality: '原创度',
+    ai_similarity: 'AI 重合度'
+  };
+
+  /* ============ DOM ============ */
+  function $(s) { return document.querySelector(s); }
+  var ta = $('#article'), counter = $('#counter'), btnScore = $('#btnScore');
+  var elBase = $('#base'), elModel = $('#model'), elKey = $('#key'), elStream = $('#stream');
+  var elPreset = $('#preset'), statusBox = $('#status'), statusMsg = $('#statusMsg'), spin = $('#spin');
+  var resultsEl = $('#results'), gToutiao = $('#gToutiao'), gWechat = $('#gWechat'), gAi = $('#gAi');
+  var suggList = $('#suggList'), noteList = $('#noteList'), metaLine = $('#metaLine'), resultMode = $('#resultMode');
+  var modeAuto = $('#modeAuto'), modeLLM = $('#modeLLM'), modeLocal = $('#modeLocal');
+  var autoFields = $('#autoFields'), llmFields = $('#llmFields'), localFields = $('#localFields');
+
+  /* ============ 配置 ============ */
+  var cfg = { mode: 'auto', base: '', model: '', key: '', stream: true };
+
+  function loadCfg() {
+    try {
+      var raw = localStorage.getItem(CFG_KEY);
+      if (raw) {
+        var o = JSON.parse(raw) || {};
+        if (typeof o.base === 'string') cfg.base = o.base;
+        if (typeof o.model === 'string') cfg.model = o.model;
+        if (typeof o.key === 'string') cfg.key = o.key;
+        if (typeof o.stream === 'boolean') cfg.stream = o.stream;
+        if (o.mode === 'local' || o.mode === 'llm' || o.mode === 'auto') cfg.mode = o.mode;
+      }
+    } catch (e) { /* ignore */ }
+    if (!cfg.base) cfg.base = 'https://api.deepseek.com/v1';
+    if (!cfg.model) cfg.model = 'deepseek-chat';
+
+    elBase.value = cfg.base;
+    elModel.value = cfg.model;
+    elKey.value = cfg.key;
+    elStream.checked = cfg.stream;
+    setMode(cfg.mode, true);
+  }
+
+  function saveCfg() {
+    cfg.base = elBase.value.trim();
+    cfg.model = elModel.value.trim();
+    cfg.key = elKey.value;
+    cfg.stream = elStream.checked;
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+    setMode(cfg.mode, true);
+  }
+
+  function setMode(m, silent) {
+    cfg.mode = m;
+    modeAuto.setAttribute('aria-pressed', String(m === 'auto'));
+    modeLLM.setAttribute('aria-pressed', String(m === 'llm'));
+    modeLocal.setAttribute('aria-pressed', String(m === 'local'));
+    autoFields.hidden = m !== 'auto';
+    llmFields.hidden = m !== 'llm';
+    localFields.hidden = m !== 'local';
+    $('#engineHint').textContent = m === 'auto'
+      ? '当前引擎：免 Key 自动 · 公共免费接口（无需任何配置）'
+      : (m === 'llm'
+        ? '当前引擎：自定义 API · ' + (cfg.model || '未填写模型')
+        : '当前引擎：本地规则 · 离线估算，不发送任何数据');
+    if (!silent) saveCfg();
+  }
+
+  /* ============ 主题 ============ */
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    $('#btnTheme').textContent = t === 'dark' ? '浅色' : '深色';
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) { /* ignore */ }
+  }
+
+  /* ============ 状态提示 ============ */
+  var statusTimer = null;
+  function setStatus(kind, html, opts) {
+    opts = opts || {};
+    statusBox.hidden = false;
+    statusBox.className = 'status ' + kind;
+    statusMsg.innerHTML = html;
+    spin.hidden = !opts.loading;
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+    if (opts.loading) {
+      var start = Date.now();
+      statusTimer = setInterval(function () {
+        var sec = Math.round((Date.now() - start) / 1000);
+        var t = document.getElementById('elapsed');
+        if (t) t.textContent = sec + 's';
+      }, 1000);
+    }
+  }
+  function clearStatus() {
+    statusBox.hidden = true;
+    statusMsg.innerHTML = '';
+    spin.hidden = true;
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+  }
+
+  /* ============ 输入区 ============ */
+  function updateCounter() {
+    var n = ta.value.length;
+    counter.textContent = n + ' / ' + MAX_CHARS;
+    counter.classList.toggle('over', n > MAX_CHARS);
+  }
+
+  /* ============ 工具 ============ */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+  function toIntScore(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return null;
+    return clamp(Math.round(n), 0, 100);
+  }
+
+  /* ============ JSON 解析（含截断修复） ============ */
+  function extractJson(raw) {
+    var t = String(raw || '').trim().replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
+    var s = t.indexOf('{');
+    var e = t.lastIndexOf('}');
+    if (s >= 0 && e > s) t = t.slice(s, e + 1);
+    try { return JSON.parse(t); } catch (err) { /* 尝试截断修复 */ }
+    var obj = JSON.parse(repairJson(t));
+    if (!obj || typeof obj !== 'object') throw new Error('解析结果不是对象');
+    obj.__truncated = true;
+    return obj;
+  }
+
+  // 截断 JSON 修复：丢弃尾部未闭合的字符串/键值，按括号栈补齐 ] 和 }
+  function repairJson(t) {
+    var stack = [], inStr = false, escNext = false, cut = t.length;
+    for (var i = 0; i < t.length; i++) {
+      var ch = t[i];
+      if (inStr) {
+        if (escNext) { escNext = false; continue; }
+        if (ch === '\\') { escNext = true; continue; }
+        if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') { inStr = true; continue; }
+      if (ch === '{' || ch === '[') { stack.push(ch); continue; }
+      if (ch === '}' || ch === ']') { stack.pop(); continue; }
+    }
+    if (inStr || (stack.length && /[:,]\s*"?[^",}\]]*$/.test(t))) {
+      // 字符串没闭合或键值不完整：截到最后一个完整分隔符
+      for (var j = t.length - 1; j >= 0; j--) {
+        var c = t[j];
+        if (c === ',' || c === '{' || c === '[' || c === '}' || c === ']') { cut = j + 1; break; }
+      }
+      t = t.slice(0, cut);
+      stack = []; inStr = false; escNext = false;
+      for (var k = 0; k < t.length; k++) {
+        var ch2 = t[k];
+        if (inStr) { if (escNext) escNext = false; else if (ch2 === '\\') escNext = true; else if (ch2 === '"') inStr = false; continue; }
+        if (ch2 === '"') inStr = true;
+        else if (ch2 === '{' || ch2 === '[') stack.push(ch2);
+        else if (ch2 === '}' || ch2 === ']') stack.pop();
+      }
+    }
+    t = t.replace(/,\s*$/, '');
+    while (stack.length) {
+      t += (stack.pop() === '{') ? '}' : ']';
+    }
+    return t;
+  }
+
+  function normDim(v) {
+    if (!v || typeof v !== 'object') return { score: null, comment: '模型未返回该维度', points: [] };
+    var points = Array.isArray(v.points)
+      ? v.points.filter(function (x) { return typeof x === 'string' && x.trim(); }).map(function (x) { return x.trim(); }).slice(0, 4)
+      : [];
+    return {
+      score: toIntScore(v.score),
+      comment: typeof v.comment === 'string' ? v.comment.trim() : '',
+      points: points
+    };
+  }
+
+  function normalizeResult(obj) {
+    var out = {
+      dims: {},
+      suggestions: [],
+      platform_note: { toutiao: '', wechat: '' },
+      missing: [],
+      truncated: !!obj.__truncated
+    };
+    DIM_ORDER.forEach(function (k) {
+      if (!obj[k]) out.missing.push(k);
+      out.dims[k] = normDim(obj[k]);
+    });
+    if (Array.isArray(obj.suggestions)) {
+      out.suggestions = obj.suggestions
+        .filter(function (x) { return typeof x === 'string' && x.trim(); })
+        .map(function (x) { return x.trim(); })
+        .slice(0, 5);
+    }
+    if (obj.platform_note && typeof obj.platform_note === 'object') {
+      out.platform_note.toutiao = typeof obj.platform_note.toutiao === 'string' ? obj.platform_note.toutiao.trim() : '';
+      out.platform_note.wechat = typeof obj.platform_note.wechat === 'string' ? obj.platform_note.wechat.trim() : '';
+    }
+    return out;
+  }
+
+  /* ============ API 调用 ============ */
+  function ApiError(status, detail) {
+    var e = new Error('API ' + status);
+    e.name = 'ApiError';
+    e.status = status;
+    e.detail = detail || '';
+    return e;
+  }
+
+  function endpointOf(base) {
+    var b = String(base || '').trim().replace(/\/+$/, '');
+    if (!b) return '';
+    if (/\/chat\/completions$/.test(b)) return b;
+    return b + '/chat/completions';
+  }
+
+  function hintForStatus(status) {
+    if (status === 401 || status === 403) return 'API Key 无效、过期或没有该模型的权限。';
+    if (status === 404) return '接口地址可能不对，检查 Base URL 是否需要带 /v1，或模型名是否拼写错误。';
+    if (status === 429) return '请求过于频繁或账户额度不足，稍后再试。';
+    if (status >= 500) return '服务端异常，稍后重试或换一个模型。';
+    return '';
+  }
+
+  function engineOf() {
+    if (cfg.mode === 'llm') {
+      return { label: '自定义 API', model: cfg.model, url: endpointOf(cfg.base), key: cfg.key, stream: cfg.stream, free: false };
+    }
+    return { label: FREE.label, model: FREE.model, url: FREE.url, key: '', stream: false, free: true };
+  }
+
+  function callLLM(text, onDelta, signal, eng) {
+    var headers = { 'Content-Type': 'application/json' };
+    if (eng.key) headers['Authorization'] = 'Bearer ' + eng.key;
+
+    var body = {
+      model: eng.model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: '请对以下文章评分：\n\n' + text }
+      ],
+      temperature: 0.2,
+      stream: !!eng.stream
+    };
+
+    return fetch(eng.url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(body),
+      signal: signal
+    }).then(function (res) {
+      if (!res.ok) {
+        var retryAfter = Number(res.headers && res.headers.get ? res.headers.get('retry-after') : 0) || 0;
+        return res.text().then(function (t) {
+          var e = ApiError(res.status, t);
+          e.retryAfter = retryAfter;
+          throw e;
+        }).catch(function (e) {
+          if (e && e.name === 'ApiError') throw e;
+          var e2 = ApiError(res.status, '');
+          e2.retryAfter = retryAfter;
+          throw e2;
+        });
+      }
+      var ctype = (res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '').toLowerCase();
+      // 服务端若按普通 JSON 返回（而非 SSE），自动退回一次性解析
+      var useStream = !!eng.stream && ctype.indexOf('application/json') === -1;
+      if (!useStream) {
+        return res.json().then(function (data) {
+          var c = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+          if (typeof c !== 'string' || !c.trim()) throw new Error('返回结构异常：未找到 choices[0].message.content');
+          return c;
+        });
+      }
+      if (!res.body || !res.body.getReader) {
+        return res.text();
+      }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var buf = '';
+      var out = '';
+      var done = false;
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done || done) return out;
+          buf += decoder.decode(r.value, { stream: true });
+          var idx;
+          while ((idx = buf.indexOf('\n')) >= 0) {
+            var line = buf.slice(0, idx).trim();
+            buf = buf.slice(idx + 1);
+            if (!line || line.indexOf('data:') !== 0) continue;
+            var payload = line.slice(5).trim();
+            if (payload === '[DONE]') { done = true; break; }
+            try {
+              var j = JSON.parse(payload);
+              var ch = j.choices && j.choices[0];
+              var d = ch && ch.delta ? (ch.delta.content || '') : '';
+              if (!d && ch && ch.message && typeof ch.message.content === 'string') d = ch.message.content;
+              if (d) {
+                out += d;
+                if (onDelta) onDelta(out);
+              }
+            } catch (e) { /* 跳过无法解析的行 */ }
+          }
+          if (done) { try { reader.cancel(); } catch (e) {} return out; }
+          return pump();
+        });
+      }
+      return pump().then(function (o) {
+        if (!o || !o.trim()) throw new Error('流式返回为空，请关闭「流式输出」后重试');
+        return o;
+      });
+    });
+  }
+
+  /* ============ 本地规则分析 ============ */
+  var AI_PHRASES = [
+    '值得注意的是', '值得一提的是', '换句话说', '综上所述', '总而言之', '总的来说', '一言以蔽之',
+    '由此可见', '不难发现', '毋庸置疑', '众所周知', '不可否认', '从某种意义上说', '究其原因',
+    '与此同时', '更重要的是', '归根结底', '需要指出的是', '不得不说', '让我们', '在这个',
+    '随着', '的时代', '赋能', '闭环', '抓手', '底层逻辑', '颗粒度', '降维打击', '护城河',
+    '生态位', '范式', '痛点', '赛道', '组合拳', '深度绑定', '核心在于', '本质上讲'
+  ];
+
+  function countOf(text, sub) {
+    if (!sub) return 0;
+    var n = 0, i = 0;
+    while ((i = text.indexOf(sub, i)) >= 0) { n++; i += sub.length; }
+    return n;
+  }
+
+  function cv(arr) {
+    if (!arr.length) return 0;
+    var mean = arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+    if (!mean) return 0;
+    var v = arr.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / arr.length;
+    return Math.sqrt(v) / mean;
+  }
+
+  function pct(n, len) { return len ? (n * 1000 / len) : 0; }
+
+  function localAnalyze(text) {
+    var len = text.length;
+    var paras = text.split(/\n+/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+    var paraLens = paras.map(function (s) { return s.length; });
+    var sents = text.split(/[。！？!?\n]/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 3; });
+    var sentLens = sents.map(function (s) { return s.length; });
+
+    var phraseHits = 0;
+    var hitWords = [];
+    AI_PHRASES.forEach(function (w) {
+      var c = countOf(text, w);
+      if (c > 0) { phraseHits += c; hitWords.push(w + '×' + c); }
+    });
+
+    var triples = 0;
+    var re = /([^，。；！？：、“”\n]{2,14})，([^，。；！？：、“”\n]{2,14})，([^，。；！？：、“”\n]{2,14})/g;
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      var a = m[1].length, b = m[2].length, c = m[3].length;
+      if (Math.abs(a - b) <= 5 && Math.abs(b - c) <= 5) triples++;
+    }
+
+    var numbers = (text.match(/\d+(?:\.\d+)?%?/g) || []).length;
+    var quotes = (text.match(/[《》「」“”"]/g) || []).length;
+    var concrete = numbers + quotes;
+    var sourceWords = (text.match(/据|数据显示|报告|研究|统计|来源|官方/g) || []).length;
+
+    var dashCount = (text.match(/——/g) || []).length;
+    var paraCv = paras.length >= 4 ? cv(paraLens) : null;
+    var sentCv = sents.length >= 8 ? cv(sentLens) : null;
+
+    var s = 28;
+    s += Math.min(30, pct(phraseHits, len) * 7);
+    s += Math.min(16, pct(triples, len) * 9);
+    s += Math.min(8, pct(dashCount, len) * 4);
+    if (paraCv !== null) s += paraCv < 0.25 ? 12 : (paraCv < 0.4 ? 6 : 0);
+    if (sentCv !== null) s += sentCv < 0.3 ? 8 : (sentCv < 0.45 ? 3 : 0);
+    s -= Math.min(20, pct(concrete, len) * 2.2);
+    s = clamp(Math.round(s), 3, 96);
+
+    var aiPoints = [];
+    if (hitWords.length) {
+      aiPoints.push('命中 ' + phraseHits + ' 处 AI 高频套话：' + hitWords.slice(0, 6).join('、') + (hitWords.length > 6 ? ' 等' : '') + '，建议替换为你自己的口语化表达。');
+    }
+    if (triples) {
+      aiPoints.push('检测到 ' + triples + ' 处三段式排比（连续三个长度相近的分句），这是最典型的 AI 节奏，建议拆成长短不一的句子。');
+    }
+    if (paraCv !== null && paraCv < 0.4) {
+      aiPoints.push('段落长度偏均匀（变异系数 ' + paraCv.toFixed(2) + '），缺少长短段落的起伏，可插入一两个一句话短段。');
+    }
+    if (sentCv !== null && sentCv < 0.45) {
+      aiPoints.push('句长分布较均匀（变异系数 ' + sentCv.toFixed(2) + '），读感偏机械，可加入短句与细节描写。');
+    }
+    if (pct(concrete, len) < 4) {
+      aiPoints.push('具体信息密度偏低：每千字仅约 ' + pct(concrete, len).toFixed(1) + ' 个数字或专名，AI 感因此被放大。');
+    } else {
+      aiPoints.push('亮点：每千字约有 ' + pct(concrete, len).toFixed(1) + ' 个数字/专名等具体信息，能有效降低 AI 感。');
+    }
+    while (aiPoints.length < 2) aiPoints.push('文本较短，特征样本不足，该数值仅供参考，建议用大模型模式复评。');
+
+    var absolutes = (text.match(/最[好大强优牛重要]|第一|唯一|绝对|100%|全网|史无前例|空前|顶级|第一流|必然|一定能/g) || []);
+    var clickbait = (text.match(/震惊|速看|必看|揭秘|真相|居然|万万没想到|内幕|炸裂|刷屏|疯传|紧急|刚刚/g) || []);
+    var accPoints = [];
+    accPoints.push('文中数字/数据类表述约 ' + numbers + ' 处，来源性表述（据…/数据显示/研究/官方）约 ' + sourceWords + ' 处' +
+      (numbers > 0 && sourceWords < Math.max(1, Math.ceil(numbers / 4)) ? '，关键数据建议逐一补上出处与时间。' : '，来源覆盖情况尚可，仍建议复核原始出处。'));
+    if (absolutes.length) {
+      accPoints.push('发现 ' + absolutes.length + ' 处绝对化表述（如「' + absolutes.slice(0, 3).join('」「') + '」），无出处时容易被判为夸大，建议改为限定说法。');
+    } else {
+      accPoints.push('未发现明显的绝对化表述，结论表述相对克制。');
+    }
+    if (clickbait.length) {
+      accPoints.push('发现 ' + clickbait.length + ' 处标题党式用词（' + clickbait.slice(0, 4).join('、') + '），公众号侧风险较高，头条侧也易被判低质。');
+    } else {
+      accPoints.push('未发现标题党式用词，信息型表达更稳。');
+    }
+    accPoints = accPoints.slice(0, 4);
+
+    var clicheOpen = (text.match(/随着.{0,12}的发展|在这个.{0,12}的时代|近年来|如今，|当下，/g) || []);
+    var template = (text.match(/首先|其次|再次|最后|第一，|第二，|第三，|一方面|另一方面/g) || []);
+    var origPoints = [];
+    if (clicheOpen.length) {
+      origPoints.push('开头使用 ' + clicheOpen.length + ' 处常见套式（「' + clicheOpen.slice(0, 2).join('」「') + '」），属于典型模板起手，建议换成具体场景或冲突事件。');
+    }
+    if (template.length >= 3) {
+      origPoints.push('检测到 ' + template.length + ' 处「首先/其次/最后」式结构词，总分总套路明显，建议用更强的观点主线替代序号。');
+    }
+    origPoints.push('文中段落共 ' + paras.length + ' 段、约 ' + len + ' 字符，可自查是否有独有案例、一手观察或可被反驳的判断；若都是公开观点的复述，洗稿风险偏高。');
+    if (numbers + quotes === 0) {
+      origPoints.push('全文缺少具名公司、数字或具体案例，信息密度不足，容易被判为「空泛综述」。');
+    }
+    origPoints = origPoints.slice(0, 4);
+
+    return {
+      dims: {
+        toutiao_accuracy: { score: null, comment: '本地规则模式不做打分，以下为可核查的风险提示。', points: accPoints },
+        toutiao_originality: { score: null, comment: '本地规则模式不做打分，以下为可核查的风险提示。', points: origPoints },
+        wechat_accuracy: { score: null, comment: '本地规则模式不做打分，以下为可核查的风险提示。', points: accPoints },
+        wechat_originality: { score: null, comment: '本地规则模式不做打分，以下为可核查的风险提示。', points: origPoints },
+        ai_similarity: {
+          score: s,
+          comment: s >= 60 ? 'AI 痕迹偏明显，句式与结构套路化程度较高。' : (s >= 35 ? '存在部分 AI 特征，但仍有个人化表达空间。' : 'AI 痕迹较弱，句式与细节较像真人写作。'),
+          points: aiPoints.slice(0, 4)
+        }
+      },
+      suggestions: [
+        '把「值得注意的是 / 换句话说 / 综上所述」这类过渡词删掉一半，直接用事实或判断承接上一句。',
+        '为关键数据补上出处、时间与口径，减少无法核实的断言。',
+        '打散三段式排比与均匀长句，加入一到两个一句话短段做节奏断点。',
+        '今日头条侧补一个可被反驳的明确判断 + 具名公司或数据；公众号侧补一段底层逻辑或独有案例。',
+        '自查是否与近期爆款文章高度雷同，如有，替换成自己的采访、观察或数据。'
+      ],
+      platform_note: {
+        toutiao: '发布前补上时效信息与硬数据，把最尖锐的判断放进标题，避免通篇行业感慨。',
+        wechat: '发布前补齐论据与信息源，压缩套话，确保读者读完能拿到一个明确的新认知。'
+      },
+      missing: [],
+      truncated: false
+    };
+  }
+
+  /* ============ 渲染 ============ */
+  function colorFor(key, score) {
+    if (typeof score !== 'number') return 'var(--muted)';
+    if (key === 'ai_similarity') {
+      if (score <= 30) return 'var(--good)';
+      if (score <= 60) return 'var(--mid)';
+      return 'var(--bad)';
+    }
+    if (score >= 80) return 'var(--good)';
+    if (score >= 60) return 'var(--mid)';
+    return 'var(--bad)';
+  }
+
+  function ringHTML(key, score) {
+    var has = typeof score === 'number';
+    var color = colorFor(key, score);
+    var p = has ? score : 0;
+    return '<div class="ring" style="--p:' + p + ';--c:' + color + '">' +
+      '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+      '<circle class="bg" cx="32" cy="32" r="27"></circle>' +
+      '<circle class="fg" cx="32" cy="32" r="27"></circle>' +
+      '</svg><span>' + (has ? score : '—') + '</span></div>';
+  }
+
+  function cardHTML(key, dim, cls) {
+    var badge = '';
+    if (key === 'ai_similarity') badge = '<em class="badge">越高越像 AI 生成</em>';
+    var pts = (dim.points && dim.points.length)
+      ? '<ul class="points">' + dim.points.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'
+      : '';
+    return '<article class="' + (cls || 'score-card') + '">' +
+      '<div class="score-top">' + ringHTML(key, dim.score) +
+      '<div class="score-meta"><div class="score-name">' + DIM_LABEL[key] + badge + '</div>' +
+      '<p class="score-comment">' + esc(dim.comment || '—') + '</p></div></div>' + pts + '</article>';
+  }
+
+  function renderResult(res, meta) {
+    gToutiao.innerHTML = cardHTML('toutiao_accuracy', res.dims.toutiao_accuracy) + cardHTML('toutiao_originality', res.dims.toutiao_originality);
+    gWechat.innerHTML = cardHTML('wechat_accuracy', res.dims.wechat_accuracy) + cardHTML('wechat_originality', res.dims.wechat_originality);
+    gAi.innerHTML = cardHTML('ai_similarity', res.dims.ai_similarity, 'score-card ai-inner');
+
+    resultMode.textContent = meta.modeLabel;
+
+    if (res.suggestions.length) {
+      suggList.innerHTML = res.suggestions.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+      $('#suggCard').hidden = false;
+    } else {
+      $('#suggCard').hidden = true;
+    }
+
+    var hasNote = res.platform_note.toutiao || res.platform_note.wechat;
+    if (hasNote) {
+      noteList.innerHTML =
+        '<div><b><span class="dot" style="background:var(--toutiao)"></span>今日头条</b>' + esc(res.platform_note.toutiao || '—') + '</div>' +
+        '<div><b><span class="dot" style="background:var(--wechat)"></span>微信公众号</b>' + esc(res.platform_note.wechat || '—') + '</div>';
+      $('#noteCard').hidden = false;
+    } else {
+      $('#noteCard').hidden = true;
+    }
+
+    var bits = [];
+    bits.push('字数 ' + meta.chars);
+    bits.push('模式 ' + meta.modeLabel);
+    if (meta.model) bits.push('模型 ' + meta.model);
+    if (meta.elapsed) bits.push('耗时 ' + meta.elapsed + 's');
+    metaLine.innerHTML = bits.map(function (b) { return '<span>' + esc(b) + '</span>'; }).join('');
+
+    resultsEl.hidden = false;
+  }
+
+  /* ============ 复制 ============ */
+  var last = null;
+
+  function fmtScore(v) { return typeof v === 'number' ? String(v) : '未评分'; }
+
+  function buildMarkdown() {
+    if (!last) return '';
+    var r = last.res, m = last.meta;
+    var out = '# 文章双平台评分报告\n\n';
+    out += '- 字数：' + m.chars + '\n- 模式：' + m.modeLabel + (m.model ? '\n- 模型：' + m.model : '') + '\n\n';
+
+    function block(title, aKey, oKey) {
+      var s = '## ' + title + '\n\n';
+      var dims = [[DIM_LABEL[aKey], r.dims[aKey]], [DIM_LABEL[oKey], r.dims[oKey]]];
+      dims.forEach(function (d) {
+        s += '### ' + d[0] + '：' + fmtScore(d[1].score) + (typeof d[1].score === 'number' ? ' / 100' : '') + '\n';
+        s += (d[1].comment || '—') + '\n';
+        if (d[1].points && d[1].points.length) {
+          s += d[1].points.map(function (p) { return '- ' + p; }).join('\n') + '\n';
+        }
+        s += '\n';
+      });
+      return s;
+    }
+
+    out += block('今日头条视角', 'toutiao_accuracy', 'toutiao_originality');
+    out += block('微信公众号视角', 'wechat_accuracy', 'wechat_originality');
+
+    var ai = r.dims.ai_similarity;
+    out += '## AI 重合度：' + fmtScore(ai.score) + (typeof ai.score === 'number' ? ' / 100（数值越高越像 AI 生成）' : '') + '\n';
+    out += (ai.comment || '—') + '\n';
+    if (ai.points && ai.points.length) out += ai.points.map(function (p) { return '- ' + p; }).join('\n') + '\n';
+    out += '\n';
+
+    if (r.suggestions.length) {
+      out += '## 综合建议\n\n' + r.suggestions.map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + '\n\n';
+    }
+    if (r.platform_note.toutiao || r.platform_note.wechat) {
+      out += '## 发布前重点\n\n';
+      if (r.platform_note.toutiao) out += '- 今日头条：' + r.platform_note.toutiao + '\n';
+      if (r.platform_note.wechat) out += '- 微信公众号：' + r.platform_note.wechat + '\n';
+      out += '\n';
+    }
+    out += '---\n评分由模型自动生成，仅供参考，不构成事实核验或法律意见。\n';
+    return out;
+  }
+
+  function buildPlain() {
+    return buildMarkdown().replace(/^#+\s*/gm, '').replace(/\*\*/g, '');
+  }
+
+  function copyText(text, btn) {
+    function done(ok) {
+      var old = btn.textContent;
+      btn.textContent = ok ? '已复制' : '复制失败';
+      setTimeout(function () { btn.textContent = old; }, 1400);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }).catch(function () { fallback(); });
+    } else {
+      fallback();
+    }
+    function fallback() {
+      try {
+        var t = document.createElement('textarea');
+        t.value = text;
+        t.setAttribute('readonly', '');
+        t.style.position = 'fixed';
+        t.style.left = '-9999px';
+        document.body.appendChild(t);
+        t.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(t);
+        done(ok);
+      } catch (e) { done(false); }
+    }
+  }
+
+  /* ============ 主流程 ============ */
+  var running = false;
+  var ctrl = null;
+  var cancelled = false;
+  var timedOut = false;
+
+  function setBusy(b) {
+    running = b;
+    btnScore.disabled = b;
+    btnScore.textContent = b ? '评分中…' : '开始评分';
+  }
+
+  function runLocal(text) {
+    var t0 = Date.now();
+    var res = localAnalyze(text);
+    var meta = {
+      chars: text.length,
+      modeLabel: '本地规则',
+      model: '',
+      elapsed: ((Date.now() - t0) / 1000).toFixed(1)
+    };
+    last = { res: res, meta: meta };
+    renderResult(res, meta);
+    setStatus('warn', '已用本地规则完成估算：<b>仅 AI 重合度为数值估计</b>，准确性与原创度只给出提示点。需要完整打分可切回「免 Key 自动」。');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // 从限流返回中解析需要等待的秒数
+  function retrySecondsOf(err) {
+    if (!err) return 0;
+    if (err.retryAfter > 0) return err.retryAfter;
+    var m = String(err.detail || '').match(/retry\s*after\s*(\d+)\s*s/i);
+    return m ? Number(m[1]) : 0;
+  }
+
+  function run() {
+    if (running) return;
+
+    var text = ta.value.trim();
+    if (!text) {
+      setStatus('error', '请先输入文章内容。');
+      ta.focus();
+      return;
+    }
+    if (text.length > MAX_CHARS) {
+      setStatus('error', '文章共 ' + text.length + ' 字符，超过上限 ' + MAX_CHARS + ' 字符，请精简后再评分。');
+      return;
+    }
+
+    saveCfg();
+
+    if (cfg.mode === 'local') {
+      clearStatus();
+      runLocal(text);
+      return;
+    }
+
+    if (cfg.mode === 'llm') {
+      if (!cfg.base) { setStatus('error', '请填写 API Base URL，例如 https://api.deepseek.com/v1'); elBase.focus(); return; }
+      if (!cfg.model) { setStatus('error', '请填写模型名，例如 deepseek-chat'); elModel.focus(); return; }
+    }
+
+    startRemote(text, engineOf());
+  }
+
+  function startRemote(text, eng) {
+    var t0 = Date.now();
+    var attempt = 0;
+    var MAX = eng.free ? 3 : 1;
+    var waitTimer = null;
+    var streamBox = null;
+
+    cancelled = false;
+    timedOut = false;
+    setBusy(true);
+    resultsEl.hidden = true;
+    last = null;
+
+    function streamHTML() {
+      return eng.stream ? '<pre class="stream" id="streamBox" style="display:none"></pre>' : '';
+    }
+    function cancelHTML() {
+      return '<div style="margin-top:8px"><button class="btn sm ghost" type="button" id="btnCancel">取消</button></div>';
+    }
+    function finish() {
+      if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }
+      setBusy(false);
+      ctrl = null;
+    }
+    function bindCancel() {
+      var b = document.getElementById('btnCancel');
+      if (b) b.addEventListener('click', function () {
+        cancelled = true;
+        if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }
+        try { ctrl.abort(); } catch (e) {}
+        setStatus('info', '已取消本次评分。');
+        finish();
+      });
+    }
+    function onDelta(acc) {
+      if (!streamBox) return;
+      streamBox.style.display = 'block';
+      streamBox.textContent = acc;
+      streamBox.scrollTop = streamBox.scrollHeight;
+    }
+
+    function showError(message, raw) {
+      var html = esc(message).replace(/\n/g, '<br />');
+      if (raw) {
+        html += '<pre class="stream">' + esc(String(raw).slice(0, 3000)) + '</pre>';
+      }
+      html += '<div style="margin-top:10px">' +
+        '<button class="btn sm" type="button" id="btnRetry2">重试</button> ' +
+        '<button class="btn sm ghost" type="button" id="btnToLocal">改用本地规则</button></div>';
+      setStatus('error', html);
+      var r = document.getElementById('btnRetry2');
+      if (r) r.addEventListener('click', run);
+      var l = document.getElementById('btnToLocal');
+      if (l) l.addEventListener('click', function () {
+        setMode('local');
+        clearStatus();
+        runLocal(ta.value.trim());
+      });
+    }
+
+    function handleRaw(raw) {
+      var obj;
+      try {
+        obj = extractJson(raw);
+      } catch (e) {
+        showError('模型返回的内容不是合法 JSON，无法解析。可换用「自定义 API」模式或稍后重试。原始返回如下：', raw);
+        finish();
+        return;
+      }
+      var res = normalizeResult(obj);
+      var meta = {
+        chars: text.length,
+        modeLabel: eng.label,
+        model: eng.model,
+        elapsed: ((Date.now() - t0) / 1000).toFixed(1)
+      };
+      last = { res: res, meta: meta };
+      renderResult(res, meta);
+      clearStatus();
+      if (res.missing.length) {
+        setStatus('warn', (res.truncated ? '返回内容被截断，已自动修复并保留可用维度；' : '模型返回缺少维度：') +
+          res.missing.map(function (k) { return DIM_LABEL[k]; }).join('、') + ' 显示为「未评分」，建议点「重新评分」补齐。');
+      }
+      resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      finish();
+    }
+
+    function describeError(err) {
+      if (err && err.name === 'ApiError') {
+        var h = hintForStatus(err.status);
+        if (eng.free && (err.status === 402 || err.status === 429)) {
+          h = '公共免费接口限流（匿名额度为同一 IP 约每 45 秒 1 次）。可稍等一会儿再试，或切换到「自定义 API」。';
+        }
+        return '接口请求失败（HTTP ' + err.status + '）。' + h;
+      }
+      if (err && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+        return '请求被中断，请重试。';
+      }
+      if (err instanceof TypeError) {
+        return eng.free
+          ? '无法连接公共免费接口：可能是网络不通、被浏览器插件拦截，或该服务暂时不可用。可稍后重试，或改用「自定义 API」/「本地规则」。'
+          : '网络请求失败：可能是 API 地址不可达，或该服务未开启浏览器跨域（CORS）访问。可换用支持 CORS 的服务商，本地 Ollama 需设置 OLLAMA_ORIGINS=* 后重启。';
+      }
+      return '评分失败：' + (err && err.message ? err.message : '未知错误') + '。请重试。';
+    }
+
+    function queueRetry(sec) {
+      var left = clamp(Math.ceil(sec), 3, 60);
+      setStatus('info',
+        '<b>免费接口排队中</b>：匿名额度约每 45 秒 1 次，<b id="waitSec">' + left + '</b> 秒后自动重试（第 ' +
+        (attempt + 1) + '/' + MAX + ' 次）。' + cancelHTML(),
+        { loading: true });
+      bindCancel();
+      waitTimer = setInterval(function () {
+        left--;
+        var el = document.getElementById('waitSec');
+        if (el) el.textContent = String(left);
+        if (left <= 0) {
+          clearInterval(waitTimer);
+          waitTimer = null;
+          tick();
+        }
+      }, 1000);
+    }
+
+    function tick() {
+      if (cancelled) return;
+      attempt++;
+      timedOut = false;
+      var local = new AbortController();
+      ctrl = local;
+      var timer = setTimeout(function () {
+        timedOut = true;
+        try { local.abort(); } catch (e) {}
+      }, TIMEOUT_MS);
+
+      setStatus('info',
+        '<b>' + (eng.free ? '正在联网评分（免 Key 公共接口）…' : '正在请求模型评分…') + '</b> 已用时 <b id="elapsed">0s</b>' +
+        (attempt > 1 ? '<br /><span style="font-size:12px">第 ' + attempt + '/' + MAX + ' 次尝试</span>' : '') +
+        (!eng.key && !eng.free ? '<br /><span style="font-size:12px">提示：未填写 API Key（本地 Ollama 等可留空）。</span>' : '') +
+        cancelHTML() + streamHTML(),
+        { loading: true });
+      bindCancel();
+      streamBox = eng.stream ? document.getElementById('streamBox') : null;
+
+      callLLM(text, onDelta, local.signal, eng)
+        .then(function (raw) {
+          clearTimeout(timer);
+          if (cancelled) return;
+          handleRaw(raw);
+        })
+        .catch(function (err) {
+          clearTimeout(timer);
+          if (cancelled) return;
+          if (timedOut) {
+            showError('请求超时（' + Math.round(TIMEOUT_MS / 1000) + ' 秒）。公共免费接口在高峰期可能较慢，可稍后重试或改用「自定义 API」。');
+            finish();
+            return;
+          }
+          var wait = retrySecondsOf(err);
+          var limited = err && (err.status === 402 || err.status === 429 || wait > 0);
+          if (eng.free && limited && attempt < MAX) {
+            queueRetry(wait || 20);
+            return;
+          }
+          showError(describeError(err) + (err && err.detail ? '\n返回内容：' + String(err.detail).slice(0, 300) : ''));
+          finish();
+        });
+    }
+
+    tick();
+  }
+
+  /* ============ 事件绑定 ============ */
+  loadCfg();
+  applyTheme((function () {
+    try { return localStorage.getItem(THEME_KEY) || 'light'; } catch (e) { return 'light'; }
+  })());
+  updateCounter();
+
+  PRESETS.forEach(function (p, i) {
+    var o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = p.name;
+    elPreset.appendChild(o);
+  });
+
+  elPreset.addEventListener('change', function () {
+    var i = elPreset.value;
+    if (i === '') return;
+    var p = PRESETS[Number(i)];
+    elBase.value = p.base;
+    elModel.value = p.model;
+    elPreset.value = '';
+    saveCfg();
+  });
+
+  ta.addEventListener('input', updateCounter);
+
+  $('#btnSample').addEventListener('click', function () {
+    ta.value = SAMPLE;
+    updateCounter();
+    ta.focus();
+  });
+  $('#btnClear').addEventListener('click', function () {
+    ta.value = '';
+    updateCounter();
+    clearStatus();
+    ta.focus();
+  });
+
+  btnScore.addEventListener('click', run);
+  $('#btnRetry').addEventListener('click', run);
+
+  modeAuto.addEventListener('click', function () { setMode('auto'); });
+  modeLLM.addEventListener('click', function () { setMode('llm'); });
+  modeLocal.addEventListener('click', function () { setMode('local'); });
+
+  [elBase, elModel, elKey, elStream].forEach(function (el) {
+    el.addEventListener('change', saveCfg);
+  });
+
+  $('#btnClearKey').addEventListener('click', function () {
+    elKey.value = '';
+    saveCfg();
+    setStatus('info', '已清除本机保存的 API Key。');
+  });
+
+  $('#btnCopyMd').addEventListener('click', function () {
+    if (!last) return;
+    copyText(buildMarkdown(), this);
+  });
+  $('#btnCopyTxt').addEventListener('click', function () {
+    if (!last) return;
+    copyText(buildPlain(), this);
+  });
+
+  $('#btnTheme').addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (!running) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+})();
+</script>
+
+
+<div data-trae-edit-ui="true" class="trae-image-download-btn" title="Download image" style="position: fixed; display: none; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: var(--trae-bg-menu, #222427); border: 1px solid var(--trae-border-l2, rgba(255,255,255,0.12)); box-shadow: var(--trae-floating-shadow, 0px 2px 8px 0px rgba(0,0,0,0.2)); color: var(--trae-icon-default, #f5f9fe); cursor: pointer; z-index: 89990; transition: background 0.15s; pointer-events: auto;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 2v8m0 0L5 7m3 3l3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg></div></body></html>
